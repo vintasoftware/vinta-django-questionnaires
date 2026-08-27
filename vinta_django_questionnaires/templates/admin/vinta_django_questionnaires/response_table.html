@@ -1,0 +1,131 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% comment %}
+  Responses as a table, with a column per question. The whole state of it lives
+  in the query string -- filters, columns, page -- so a filtered view is a link
+  someone can send, and the CSV button is that same link with `/export/` in it.
+{% endcomment %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'vinta_django_questionnaires/admin.css' %}">
+{% endblock %}
+
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% translate "Home" %}</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+    &rsaquo; {% translate "Responses" %}
+  </div>
+{% endblock %}
+
+{% block content %}
+<div class="vqa">
+  <form method="get" class="vqa-filters">
+    <div class="vqa-field">
+      <label for="vqa-questionnaire">{% translate "Questionnaire" %}</label>
+      <select id="vqa-questionnaire" name="questionnaire" onchange="this.form.submit()">
+        <option value="">{% translate "Every questionnaire" %}</option>
+        {% for entry in table.questionnaires %}
+          <option value="{{ entry.key }}" {% if entry.selected %}selected{% endif %}>{{ entry.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    {% if table.versions %}
+      <div class="vqa-field">
+        <label for="vqa-version">{% translate "Version" %}</label>
+        <select id="vqa-version" name="version" onchange="this.form.submit()">
+          <option value="">{% translate "Latest" %}</option>
+          {% for entry in table.versions %}
+            <option value="{{ entry.version }}" {% if entry.selected %}selected{% endif %}>{{ entry.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    {% endif %}
+
+    <div class="vqa-field">
+      <label for="vqa-status">{% translate "Status" %}</label>
+      <select id="vqa-status" name="status" onchange="this.form.submit()">
+        <option value="">{% translate "Any status" %}</option>
+        {% for entry in table.statuses %}
+          <option value="{{ entry.value }}" {% if entry.selected %}selected{% endif %}>{{ entry.label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="vqa-field">
+      <label for="vqa-search">{% translate "Search" %}</label>
+      <input id="vqa-search" type="search" name="search" value="{{ table.search }}"
+             placeholder="{% translate 'Respondent or external id' %}">
+    </div>
+
+    <div class="vqa-field">
+      <label for="vqa-size">{% translate "Per page" %}</label>
+      <select id="vqa-size" name="size" onchange="this.form.submit()">
+        <option value="10" {% if table.page_size == 10 %}selected{% endif %}>10</option>
+        <option value="25" {% if table.page_size == 25 %}selected{% endif %}>25</option>
+        <option value="50" {% if table.page_size == 50 %}selected{% endif %}>50</option>
+        <option value="100" {% if table.page_size == 100 %}selected{% endif %}>100</option>
+      </select>
+    </div>
+
+    <button type="submit">{% translate "Apply" %}</button>
+    <a class="vqa-link" href="{{ export_url }}?{{ table.export_query }}">{% translate "Export CSV" %}</a>
+    <a class="vqa-link" href="{{ changelist_url }}">{% translate "The plain list" %}</a>
+
+    <details class="vqa-columns">
+      <summary>{% blocktranslate count counter=table.selected|length %}{{ counter }} column{% plural %}{{ counter }} columns{% endblocktranslate %}</summary>
+      <div class="vqa-columns__body">
+        <p class="help">
+          {% translate "Untick what you do not need. The CSV takes whatever is left, so the download matches what is on screen." %}
+          {% if not table.questionnaire %}
+            <strong>{% translate "Pick a questionnaire to get a column per question." %}</strong>
+          {% endif %}
+        </p>
+        <div class="vqa-columns__groups">
+          {% for group in table.column_groups %}
+            <div class="vqa-columns__group">
+              <h4>{{ group.title }}</h4>
+              {% for column in group.columns %}
+                <label class="vqa-columns__option">
+                  <input type="checkbox" name="columns" value="{{ column.key }}" {% if column.checked %}checked{% endif %}>
+                  <span>{{ column.label }}</span>
+                </label>
+              {% endfor %}
+            </div>
+          {% endfor %}
+        </div>
+        <button type="submit">{% translate "Show these" %}</button>
+      </div>
+    </details>
+  </form>
+
+  <div class="vqa-table-scroll">
+    <table class="vqa-table">
+      <thead>
+        <tr>
+          {% for column in table.selected %}<th scope="col">{{ column.label }}</th>{% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in table.cells %}
+          <tr>
+            {% for cell in row.cells %}<td title="{{ cell }}">{{ cell|default:"—"|truncatechars:80 }}</td>{% endfor %}
+          </tr>
+        {% empty %}
+          <tr><td colspan="{{ table.selected|length }}">{% translate "Nothing answered yet." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <p class="vqa-paginator">
+    {% blocktranslate count counter=table.total %}{{ counter }} response{% plural %}{{ counter }} responses{% endblocktranslate %}
+    &middot; {% blocktranslate with page=table.number pages=table.total_pages %}page {{ page }} of {{ pages }}{% endblocktranslate %}
+    {% if table.has_previous %}<a class="vqa-link" href="?{{ table.previous_query }}">{% translate "Previous" %}</a>{% endif %}
+    {% if table.has_next %}<a class="vqa-link" href="?{{ table.next_query }}">{% translate "Next" %}</a>{% endif %}
+  </p>
+</div>
+{% endblock %}

@@ -1,0 +1,2078 @@
+{
+  "cases": [
+    {
+      "expects": [],
+      "label": "",
+      "params": {
+        "content_types": [
+          "application/pdf"
+        ]
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              [
+                "application/pdf"
+              ]
+            ],
+            "errorKey": "unsupported_file_type",
+            "kind": "file.contentType",
+            "message": "{name} is not an accepted file type.",
+            "params": {
+              "content_types": [
+                "application/pdf"
+              ]
+            },
+            "skipWhenEmpty": true,
+            "validator": "allowed_content_types"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "single_file",
+        "usesContext": false
+      },
+      "questionType": "single_file",
+      "validator": "allowed_content_types",
+      "value": {
+        "content_type": "application/pdf",
+        "name": "a.pdf",
+        "size": 10
+      }
+    },
+    {
+      "expects": [
+        "unsupported_file_type"
+      ],
+      "label": "",
+      "params": {
+        "content_types": [
+          "application/pdf"
+        ]
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              [
+                "application/pdf"
+              ]
+            ],
+            "errorKey": "unsupported_file_type",
+            "kind": "file.contentType",
+            "message": "{name} is not an accepted file type.",
+            "params": {
+              "content_types": [
+                "application/pdf"
+              ]
+            },
+            "skipWhenEmpty": true,
+            "validator": "allowed_content_types"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "single_file",
+        "usesContext": false
+      },
+      "questionType": "single_file",
+      "validator": "allowed_content_types",
+      "value": {
+        "content_type": "image/png",
+        "name": "a.png",
+        "size": 10
+      }
+    },
+    {
+      "expects": [],
+      "label": "wildcards match a whole family",
+      "params": {
+        "content_types": [
+          "image/*"
+        ]
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              [
+                "image/*"
+              ]
+            ],
+            "errorKey": "unsupported_file_type",
+            "kind": "file.contentType",
+            "message": "{name} is not an accepted file type.",
+            "params": {
+              "content_types": [
+                "image/*"
+              ]
+            },
+            "skipWhenEmpty": true,
+            "validator": "allowed_content_types"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "single_file",
+        "usesContext": false
+      },
+      "questionType": "single_file",
+      "validator": "allowed_content_types",
+      "value": {
+        "content_type": "image/png",
+        "name": "a.png",
+        "size": 10
+      }
+    },
+    {
+      "expects": [],
+      "label": "",
+      "params": {},
+      "plan": {
+        "checks": [
+          {
+            "args": [],
+            "errorKey": "invalid_email",
+            "kind": "string.email",
+            "message": "Enter a valid email address.",
+            "params": {},
+            "skipWhenEmpty": true,
+            "validator": "email"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "free_text",
+        "usesContext": false
+      },
+      "questionType": "free_text",
+      "validator": "email",
+      "value": "hugo@vinta.com.br"
+    },
+    {
+      "expects": [
+        "invalid_email"
+      ],
+      "label": "",
+      "params": {},
+      "plan": {
+        "checks": [
+          {
+            "args": [],
+            "errorKey": "invalid_email",
+            "kind": "string.email",
+            "message": "Enter a valid email address.",
+            "params": {},
+            "skipWhenEmpty": true,
+            "validator": "email"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "free_text",
+        "usesContext": false
+      },
+      "questionType": "free_text",
+      "validator": "email",
+      "value": "not-an-email"
+    },
+    {
+      "expects": [
+        "invalid_email"
+      ],
+      "label": "a host needs a dot",
+      "params": {},
+      "plan": {
+        "checks": [
+          {
+            "args": [],
+            "errorKey": "invalid_email",
+            "kind": "string.email",
+            "message": "Enter a valid email address.",
+            "params": {},
+            "skipWhenEmpty": true,
+            "validator": "email"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "free_text",
+        "usesContext": false
+      },
+      "questionType": "free_text",
+      "validator": "email",
+      "value": "hugo@localhost"
+    },
+    {
+      "expects": [],
+      "label": "",
+      "params": {
+        "suffix": ".pdf"
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              ".pdf"
+            ],
+            "errorKey": "not_ends_with",
+            "kind": "string.endsWith",
+            "message": "This must end with {suffix}.",
+            "params": {
+              "suffix": ".pdf"
+            },
+            "skipWhenEmpty": true,
+            "validator": "ends_with"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "free_text",
+        "usesContext": false
+      },
+      "questionType": "free_text",
+      "validator": "ends_with",
+      "value": "report.pdf"
+    },
+    {
+      "expects": [
+        "not_ends_with"
+      ],
+      "label": "",
+      "params": {
+        "suffix": ".pdf"
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              ".pdf"
+            ],
+            "errorKey": "not_ends_with",
+            "kind": "string.endsWith",
+            "message": "This must end with {suffix}.",
+            "params": {
+              "suffix": ".pdf"
+            },
+            "skipWhenEmpty": true,
+            "validator": "ends_with"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "free_text",
+        "usesContext": false
+      },
+      "questionType": "free_text",
+      "validator": "ends_with",
+      "value": "report.doc"
+    },
+    {
+      "expects": [],
+      "label": "",
+      "params": {
+        "substring": "big"
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              "big"
+            ],
+            "errorKey": "does_not_include",
+            "kind": "string.includes",
+            "message": "This must contain {substring}.",
+            "params": {
+              "substring": "big"
+            },
+            "skipWhenEmpty": true,
+            "validator": "includes"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "free_text",
+        "usesContext": false
+      },
+      "questionType": "free_text",
+      "validator": "includes",
+      "value": "a big cat"
+    },
+    {
+      "expects": [
+        "does_not_include"
+      ],
+      "label": "",
+      "params": {
+        "substring": "big"
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              "big"
+            ],
+            "errorKey": "does_not_include",
+            "kind": "string.includes",
+            "message": "This must contain {substring}.",
+            "params": {
+              "substring": "big"
+            },
+            "skipWhenEmpty": true,
+            "validator": "includes"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "free_text",
+        "usesContext": false
+      },
+      "questionType": "free_text",
+      "validator": "includes",
+      "value": "a small cat"
+    },
+    {
+      "expects": [],
+      "label": "",
+      "params": {},
+      "plan": {
+        "checks": [
+          {
+            "args": [],
+            "errorKey": "not_integer",
+            "kind": "number.int",
+            "message": "Enter a whole number.",
+            "params": {},
+            "skipWhenEmpty": true,
+            "validator": "integer"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "number",
+        "usesContext": false
+      },
+      "questionType": "number",
+      "validator": "integer",
+      "value": 3
+    },
+    {
+      "expects": [
+        "not_integer"
+      ],
+      "label": "",
+      "params": {},
+      "plan": {
+        "checks": [
+          {
+            "args": [],
+            "errorKey": "not_integer",
+            "kind": "number.int",
+            "message": "Enter a whole number.",
+            "params": {},
+            "skipWhenEmpty": true,
+            "validator": "integer"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "number",
+        "usesContext": false
+      },
+      "questionType": "number",
+      "validator": "integer",
+      "value": 3.5
+    },
+    {
+      "expects": [],
+      "label": "",
+      "params": {
+        "expression": "value > `5`"
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              "value > `5`"
+            ],
+            "errorKey": "predicate_failed",
+            "kind": "logic.jmespath",
+            "message": "This answer is not valid here.",
+            "params": {
+              "expression": "value > `5`"
+            },
+            "skipWhenEmpty": true,
+            "validator": "jmespath_predicate"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "number",
+        "usesContext": true
+      },
+      "questionType": "number",
+      "validator": "jmespath_predicate",
+      "value": 10
+    },
+    {
+      "expects": [
+        "predicate_failed"
+      ],
+      "label": "",
+      "params": {
+        "expression": "value > `5`"
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              "value > `5`"
+            ],
+            "errorKey": "predicate_failed",
+            "kind": "logic.jmespath",
+            "message": "This answer is not valid here.",
+            "params": {
+              "expression": "value > `5`"
+            },
+            "skipWhenEmpty": true,
+            "validator": "jmespath_predicate"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "number",
+        "usesContext": true
+      },
+      "questionType": "number",
+      "validator": "jmespath_predicate",
+      "value": 3
+    },
+    {
+      "expects": [
+        "predicate_failed"
+      ],
+      "label": "an absent earlier result is falsy",
+      "params": {
+        "expression": "results.min_length.valid"
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              "results.min_length.valid"
+            ],
+            "errorKey": "predicate_failed",
+            "kind": "logic.jmespath",
+            "message": "This answer is not valid here.",
+            "params": {
+              "expression": "results.min_length.valid"
+            },
+            "skipWhenEmpty": true,
+            "validator": "jmespath_predicate"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "free_text",
+        "usesContext": true
+      },
+      "questionType": "free_text",
+      "validator": "jmespath_predicate",
+      "value": "x"
+    },
+    {
+      "expects": [],
+      "label": "",
+      "params": {
+        "maximum": "2026-12-31"
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              "2026-12-31"
+            ],
+            "errorKey": "date_too_late",
+            "kind": "date.max",
+            "message": "Choose {maximum} or earlier.",
+            "params": {
+              "maximum": "2026-12-31"
+            },
+            "skipWhenEmpty": true,
+            "validator": "max_date"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "date",
+        "usesContext": false
+      },
+      "questionType": "date",
+      "validator": "max_date",
+      "value": "2026-01-01"
+    },
+    {
+      "expects": [
+        "date_too_late"
+      ],
+      "label": "",
+      "params": {
+        "maximum": "2026-12-31"
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              "2026-12-31"
+            ],
+            "errorKey": "date_too_late",
+            "kind": "date.max",
+            "message": "Choose {maximum} or earlier.",
+            "params": {
+              "maximum": "2026-12-31"
+            },
+            "skipWhenEmpty": true,
+            "validator": "max_date"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "date",
+        "usesContext": false
+      },
+      "questionType": "date",
+      "validator": "max_date",
+      "value": "2027-01-01"
+    },
+    {
+      "expects": [],
+      "label": "",
+      "params": {
+        "max_bytes": 2000
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              2000
+            ],
+            "errorKey": "file_too_large",
+            "kind": "file.maxSize",
+            "message": "{name} is over the {max_bytes} byte limit.",
+            "params": {
+              "max_bytes": 2000
+            },
+            "skipWhenEmpty": true,
+            "validator": "max_file_size"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "single_file",
+        "usesContext": false
+      },
+      "questionType": "single_file",
+      "validator": "max_file_size",
+      "value": {
+        "content_type": "application/pdf",
+        "name": "a.pdf",
+        "size": 1000
+      }
+    },
+    {
+      "expects": [
+        "file_too_large"
+      ],
+      "label": "",
+      "params": {
+        "max_bytes": 2000
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              2000
+            ],
+            "errorKey": "file_too_large",
+            "kind": "file.maxSize",
+            "message": "{name} is over the {max_bytes} byte limit.",
+            "params": {
+              "max_bytes": 2000
+            },
+            "skipWhenEmpty": true,
+            "validator": "max_file_size"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "single_file",
+        "usesContext": false
+      },
+      "questionType": "single_file",
+      "validator": "max_file_size",
+      "value": {
+        "content_type": "application/pdf",
+        "name": "a.pdf",
+        "size": 4000
+      }
+    },
+    {
+      "expects": [],
+      "label": "",
+      "params": {
+        "maximum": 2
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              2
+            ],
+            "errorKey": "too_many_items",
+            "kind": "array.max",
+            "message": "Choose at most {maximum}.",
+            "params": {
+              "maximum": 2
+            },
+            "skipWhenEmpty": true,
+            "validator": "max_items"
+          }
+        ],
+        "choices": [],
+        "condition": "",
+        "key": "answer",
+        "type": "multiple_choice",
+        "usesContext": false
+      },
+      "questionType": "multiple_choice",
+      "validator": "max_items",
+      "value": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "expects": [
+        "too_many_items"
+      ],
+      "label": "",
+      "params": {
+        "maximum": 2
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              2
+            ],
+            "errorKey": "too_many_items",
+            "kind": "array.max",
+            "message": "Choose at most {maximum}.",
+            "params": {
+              "maximum": 2
+            },
+            "skipWhenEmpty": true,
+            "validator": "max_items"
+          }
+        ],
+        "choices": [],
+        "condition": "",
+        "key": "answer",
+        "type": "multiple_choice",
+        "usesContext": false
+      },
+      "questionType": "multiple_choice",
+      "validator": "max_items",
+      "value": [
+        "a",
+        "b",
+        "c"
+      ]
+    },
+    {
+      "expects": [
+        "too_long"
+      ],
+      "label": "",
+      "params": {
+        "maximum": 3
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              3
+            ],
+            "errorKey": "too_long",
+            "kind": "string.max",
+            "message": "Use at most {maximum} characters.",
+            "params": {
+              "maximum": 3
+            },
+            "skipWhenEmpty": true,
+            "validator": "max_length"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "free_text",
+        "usesContext": false
+      },
+      "questionType": "free_text",
+      "validator": "max_length",
+      "value": "abcd"
+    },
+    {
+      "expects": [],
+      "label": "",
+      "params": {
+        "maximum": 3
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              3
+            ],
+            "errorKey": "too_long",
+            "kind": "string.max",
+            "message": "Use at most {maximum} characters.",
+            "params": {
+              "maximum": 3
+            },
+            "skipWhenEmpty": true,
+            "validator": "max_length"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "free_text",
+        "usesContext": false
+      },
+      "questionType": "free_text",
+      "validator": "max_length",
+      "value": "abc"
+    },
+    {
+      "expects": [],
+      "label": "",
+      "params": {
+        "maximum": 5
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              5
+            ],
+            "errorKey": "too_large",
+            "kind": "number.lte",
+            "message": "Enter {maximum} or less.",
+            "params": {
+              "maximum": 5
+            },
+            "skipWhenEmpty": true,
+            "validator": "max_value"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "number",
+        "usesContext": false
+      },
+      "questionType": "number",
+      "validator": "max_value",
+      "value": 5
+    },
+    {
+      "expects": [
+        "too_large"
+      ],
+      "label": "",
+      "params": {
+        "maximum": 5
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              5
+            ],
+            "errorKey": "too_large",
+            "kind": "number.lte",
+            "message": "Enter {maximum} or less.",
+            "params": {
+              "maximum": 5
+            },
+            "skipWhenEmpty": true,
+            "validator": "max_value"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "number",
+        "usesContext": false
+      },
+      "questionType": "number",
+      "validator": "max_value",
+      "value": 6
+    },
+    {
+      "expects": [
+        "too_large"
+      ],
+      "label": "",
+      "params": {
+        "exclusive": true,
+        "maximum": 5
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              5
+            ],
+            "errorKey": "too_large",
+            "kind": "number.lt",
+            "message": "Enter {maximum} or less.",
+            "params": {
+              "exclusive": true,
+              "maximum": 5
+            },
+            "skipWhenEmpty": true,
+            "validator": "max_value"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "number",
+        "usesContext": false
+      },
+      "questionType": "number",
+      "validator": "max_value",
+      "value": 5
+    },
+    {
+      "expects": [],
+      "label": "",
+      "params": {
+        "minimum": "2026-01-01"
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              "2026-01-01"
+            ],
+            "errorKey": "date_too_early",
+            "kind": "date.min",
+            "message": "Choose {minimum} or later.",
+            "params": {
+              "minimum": "2026-01-01"
+            },
+            "skipWhenEmpty": true,
+            "validator": "min_date"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "date",
+        "usesContext": false
+      },
+      "questionType": "date",
+      "validator": "min_date",
+      "value": "2026-03-01"
+    },
+    {
+      "expects": [
+        "date_too_early"
+      ],
+      "label": "",
+      "params": {
+        "minimum": "2026-01-01"
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              "2026-01-01"
+            ],
+            "errorKey": "date_too_early",
+            "kind": "date.min",
+            "message": "Choose {minimum} or later.",
+            "params": {
+              "minimum": "2026-01-01"
+            },
+            "skipWhenEmpty": true,
+            "validator": "min_date"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "date",
+        "usesContext": false
+      },
+      "questionType": "date",
+      "validator": "min_date",
+      "value": "2025-12-31"
+    },
+    {
+      "expects": [],
+      "label": "",
+      "params": {
+        "minimum": 2
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              2
+            ],
+            "errorKey": "too_few_items",
+            "kind": "array.min",
+            "message": "Choose at least {minimum}.",
+            "params": {
+              "minimum": 2
+            },
+            "skipWhenEmpty": true,
+            "validator": "min_items"
+          }
+        ],
+        "choices": [],
+        "condition": "",
+        "key": "answer",
+        "type": "multiple_choice",
+        "usesContext": false
+      },
+      "questionType": "multiple_choice",
+      "validator": "min_items",
+      "value": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "expects": [
+        "too_few_items"
+      ],
+      "label": "",
+      "params": {
+        "minimum": 2
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              2
+            ],
+            "errorKey": "too_few_items",
+            "kind": "array.min",
+            "message": "Choose at least {minimum}.",
+            "params": {
+              "minimum": 2
+            },
+            "skipWhenEmpty": true,
+            "validator": "min_items"
+          }
+        ],
+        "choices": [],
+        "condition": "",
+        "key": "answer",
+        "type": "multiple_choice",
+        "usesContext": false
+      },
+      "questionType": "multiple_choice",
+      "validator": "min_items",
+      "value": [
+        "a"
+      ]
+    },
+    {
+      "expects": [
+        "too_short"
+      ],
+      "label": "",
+      "params": {
+        "minimum": 3
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              3
+            ],
+            "errorKey": "too_short",
+            "kind": "string.min",
+            "message": "Use at least {minimum} characters.",
+            "params": {
+              "minimum": 3
+            },
+            "skipWhenEmpty": true,
+            "validator": "min_length"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "free_text",
+        "usesContext": false
+      },
+      "questionType": "free_text",
+      "validator": "min_length",
+      "value": "ab"
+    },
+    {
+      "expects": [],
+      "label": "",
+      "params": {
+        "minimum": 3
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              3
+            ],
+            "errorKey": "too_short",
+            "kind": "string.min",
+            "message": "Use at least {minimum} characters.",
+            "params": {
+              "minimum": 3
+            },
+            "skipWhenEmpty": true,
+            "validator": "min_length"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "free_text",
+        "usesContext": false
+      },
+      "questionType": "free_text",
+      "validator": "min_length",
+      "value": "abc"
+    },
+    {
+      "expects": [],
+      "label": "empty answers skip the check",
+      "params": {
+        "minimum": 3
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              3
+            ],
+            "errorKey": "too_short",
+            "kind": "string.min",
+            "message": "Use at least {minimum} characters.",
+            "params": {
+              "minimum": 3
+            },
+            "skipWhenEmpty": true,
+            "validator": "min_length"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "free_text",
+        "usesContext": false
+      },
+      "questionType": "free_text",
+      "validator": "min_length",
+      "value": ""
+    },
+    {
+      "expects": [],
+      "label": "",
+      "params": {
+        "minimum": 5
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              5
+            ],
+            "errorKey": "too_small",
+            "kind": "number.gte",
+            "message": "Enter {minimum} or more.",
+            "params": {
+              "minimum": 5
+            },
+            "skipWhenEmpty": true,
+            "validator": "min_value"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "number",
+        "usesContext": false
+      },
+      "questionType": "number",
+      "validator": "min_value",
+      "value": 5
+    },
+    {
+      "expects": [
+        "too_small"
+      ],
+      "label": "",
+      "params": {
+        "minimum": 5
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              5
+            ],
+            "errorKey": "too_small",
+            "kind": "number.gte",
+            "message": "Enter {minimum} or more.",
+            "params": {
+              "minimum": 5
+            },
+            "skipWhenEmpty": true,
+            "validator": "min_value"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "number",
+        "usesContext": false
+      },
+      "questionType": "number",
+      "validator": "min_value",
+      "value": 4
+    },
+    {
+      "expects": [
+        "too_small"
+      ],
+      "label": "",
+      "params": {
+        "exclusive": true,
+        "minimum": 5
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              5
+            ],
+            "errorKey": "too_small",
+            "kind": "number.gt",
+            "message": "Enter {minimum} or more.",
+            "params": {
+              "exclusive": true,
+              "minimum": 5
+            },
+            "skipWhenEmpty": true,
+            "validator": "min_value"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "number",
+        "usesContext": false
+      },
+      "questionType": "number",
+      "validator": "min_value",
+      "value": 5
+    },
+    {
+      "expects": [],
+      "label": "",
+      "params": {
+        "step": 5
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              5
+            ],
+            "errorKey": "not_multiple_of",
+            "kind": "number.multipleOf",
+            "message": "Enter a multiple of {step}.",
+            "params": {
+              "step": 5
+            },
+            "skipWhenEmpty": true,
+            "validator": "multiple_of"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "number",
+        "usesContext": false
+      },
+      "questionType": "number",
+      "validator": "multiple_of",
+      "value": 15
+    },
+    {
+      "expects": [
+        "not_multiple_of"
+      ],
+      "label": "",
+      "params": {
+        "step": 5
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              5
+            ],
+            "errorKey": "not_multiple_of",
+            "kind": "number.multipleOf",
+            "message": "Enter a multiple of {step}.",
+            "params": {
+              "step": 5
+            },
+            "skipWhenEmpty": true,
+            "validator": "multiple_of"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "number",
+        "usesContext": false
+      },
+      "questionType": "number",
+      "validator": "multiple_of",
+      "value": 16
+    },
+    {
+      "expects": [],
+      "label": "decimals are exact",
+      "params": {
+        "step": 0.1
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              0.1
+            ],
+            "errorKey": "not_multiple_of",
+            "kind": "number.multipleOf",
+            "message": "Enter a multiple of {step}.",
+            "params": {
+              "step": 0.1
+            },
+            "skipWhenEmpty": true,
+            "validator": "multiple_of"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "number",
+        "usesContext": false
+      },
+      "questionType": "number",
+      "validator": "multiple_of",
+      "value": 0.3
+    },
+    {
+      "expects": [],
+      "label": "",
+      "params": {
+        "values": [
+          "red",
+          "blue"
+        ]
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              [
+                "red",
+                "blue"
+              ]
+            ],
+            "errorKey": "not_allowed",
+            "kind": "value.oneOf",
+            "message": "{value} is not one of the allowed values.",
+            "params": {
+              "values": [
+                "red",
+                "blue"
+              ]
+            },
+            "skipWhenEmpty": true,
+            "validator": "one_of"
+          }
+        ],
+        "choices": [],
+        "condition": "",
+        "key": "answer",
+        "type": "single_choice",
+        "usesContext": false
+      },
+      "questionType": "single_choice",
+      "validator": "one_of",
+      "value": "red"
+    },
+    {
+      "expects": [
+        "not_allowed"
+      ],
+      "label": "",
+      "params": {
+        "values": [
+          "red",
+          "blue"
+        ]
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              [
+                "red",
+                "blue"
+              ]
+            ],
+            "errorKey": "not_allowed",
+            "kind": "value.oneOf",
+            "message": "{value} is not one of the allowed values.",
+            "params": {
+              "values": [
+                "red",
+                "blue"
+              ]
+            },
+            "skipWhenEmpty": true,
+            "validator": "one_of"
+          }
+        ],
+        "choices": [],
+        "condition": "",
+        "key": "answer",
+        "type": "single_choice",
+        "usesContext": false
+      },
+      "questionType": "single_choice",
+      "validator": "one_of",
+      "value": "green"
+    },
+    {
+      "expects": [
+        "not_allowed"
+      ],
+      "label": "",
+      "params": {
+        "values": [
+          "red",
+          "blue"
+        ]
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              [
+                "red",
+                "blue"
+              ]
+            ],
+            "errorKey": "not_allowed",
+            "kind": "value.oneOf",
+            "message": "{value} is not one of the allowed values.",
+            "params": {
+              "values": [
+                "red",
+                "blue"
+              ]
+            },
+            "skipWhenEmpty": true,
+            "validator": "one_of"
+          }
+        ],
+        "choices": [],
+        "condition": "",
+        "key": "answer",
+        "type": "multiple_choice",
+        "usesContext": false
+      },
+      "questionType": "multiple_choice",
+      "validator": "one_of",
+      "value": [
+        "red",
+        "green"
+      ]
+    },
+    {
+      "expects": [],
+      "label": "",
+      "params": {
+        "pattern": "^[A-Z]{2}[0-9]{2}$"
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              "^[A-Z]{2}[0-9]{2}$",
+              false
+            ],
+            "errorKey": "pattern_mismatch",
+            "kind": "string.regex",
+            "message": "This value has the wrong format.",
+            "params": {
+              "pattern": "^[A-Z]{2}[0-9]{2}$"
+            },
+            "skipWhenEmpty": true,
+            "validator": "pattern"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "free_text",
+        "usesContext": false
+      },
+      "questionType": "free_text",
+      "validator": "pattern",
+      "value": "AB12"
+    },
+    {
+      "expects": [
+        "pattern_mismatch"
+      ],
+      "label": "",
+      "params": {
+        "pattern": "^[A-Z]{2}[0-9]{2}$"
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              "^[A-Z]{2}[0-9]{2}$",
+              false
+            ],
+            "errorKey": "pattern_mismatch",
+            "kind": "string.regex",
+            "message": "This value has the wrong format.",
+            "params": {
+              "pattern": "^[A-Z]{2}[0-9]{2}$"
+            },
+            "skipWhenEmpty": true,
+            "validator": "pattern"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "free_text",
+        "usesContext": false
+      },
+      "questionType": "free_text",
+      "validator": "pattern",
+      "value": "ab12"
+    },
+    {
+      "expects": [],
+      "label": "",
+      "params": {
+        "ignore_case": true,
+        "pattern": "^[A-Z]{2}[0-9]{2}$"
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              "^[A-Z]{2}[0-9]{2}$",
+              true
+            ],
+            "errorKey": "pattern_mismatch",
+            "kind": "string.regex",
+            "message": "This value has the wrong format.",
+            "params": {
+              "ignore_case": true,
+              "pattern": "^[A-Z]{2}[0-9]{2}$"
+            },
+            "skipWhenEmpty": true,
+            "validator": "pattern"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "free_text",
+        "usesContext": false
+      },
+      "questionType": "free_text",
+      "validator": "pattern",
+      "value": "ab12"
+    },
+    {
+      "expects": [],
+      "label": "",
+      "params": {},
+      "plan": {
+        "checks": [
+          {
+            "args": [],
+            "errorKey": "range_out_of_order",
+            "kind": "range.ordered",
+            "message": "The start must come before the end.",
+            "params": {},
+            "skipWhenEmpty": true,
+            "validator": "range_ordered"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "date_range",
+        "usesContext": false
+      },
+      "questionType": "date_range",
+      "validator": "range_ordered",
+      "value": {
+        "end": "2026-02-01",
+        "start": "2026-01-01"
+      }
+    },
+    {
+      "expects": [
+        "range_out_of_order"
+      ],
+      "label": "",
+      "params": {},
+      "plan": {
+        "checks": [
+          {
+            "args": [],
+            "errorKey": "range_out_of_order",
+            "kind": "range.ordered",
+            "message": "The start must come before the end.",
+            "params": {},
+            "skipWhenEmpty": true,
+            "validator": "range_ordered"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "date_range",
+        "usesContext": false
+      },
+      "questionType": "date_range",
+      "validator": "range_ordered",
+      "value": {
+        "end": "2026-02-01",
+        "start": "2026-03-01"
+      }
+    },
+    {
+      "expects": [
+        "incomplete_range"
+      ],
+      "label": "",
+      "params": {},
+      "plan": {
+        "checks": [
+          {
+            "args": [],
+            "errorKey": "range_out_of_order",
+            "kind": "range.ordered",
+            "message": "The start must come before the end.",
+            "params": {},
+            "skipWhenEmpty": true,
+            "validator": "range_ordered"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "date_range",
+        "usesContext": false
+      },
+      "questionType": "date_range",
+      "validator": "range_ordered",
+      "value": {
+        "end": null,
+        "start": "2026-03-01"
+      }
+    },
+    {
+      "expects": [],
+      "label": "",
+      "params": {},
+      "plan": {
+        "checks": [
+          {
+            "args": [],
+            "errorKey": "range_out_of_order",
+            "kind": "range.ordered",
+            "message": "The start must come before the end.",
+            "params": {},
+            "skipWhenEmpty": true,
+            "validator": "range_ordered"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "number_range",
+        "usesContext": false
+      },
+      "questionType": "number_range",
+      "validator": "range_ordered",
+      "value": {
+        "end": 10,
+        "start": 1
+      }
+    },
+    {
+      "expects": [
+        "range_out_of_order"
+      ],
+      "label": "",
+      "params": {},
+      "plan": {
+        "checks": [
+          {
+            "args": [],
+            "errorKey": "range_out_of_order",
+            "kind": "range.ordered",
+            "message": "The start must come before the end.",
+            "params": {},
+            "skipWhenEmpty": true,
+            "validator": "range_ordered"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "number_range",
+        "usesContext": false
+      },
+      "questionType": "number_range",
+      "validator": "range_ordered",
+      "value": {
+        "end": 1,
+        "start": 10
+      }
+    },
+    {
+      "expects": [
+        "required"
+      ],
+      "label": "",
+      "params": {},
+      "plan": {
+        "checks": [
+          {
+            "args": [],
+            "errorKey": "required",
+            "kind": "presence.required",
+            "message": "This answer is required.",
+            "params": {},
+            "skipWhenEmpty": false,
+            "validator": "required"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "free_text",
+        "usesContext": false
+      },
+      "questionType": "free_text",
+      "validator": "required",
+      "value": null
+    },
+    {
+      "expects": [
+        "required"
+      ],
+      "label": "",
+      "params": {},
+      "plan": {
+        "checks": [
+          {
+            "args": [],
+            "errorKey": "required",
+            "kind": "presence.required",
+            "message": "This answer is required.",
+            "params": {},
+            "skipWhenEmpty": false,
+            "validator": "required"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "free_text",
+        "usesContext": false
+      },
+      "questionType": "free_text",
+      "validator": "required",
+      "value": ""
+    },
+    {
+      "expects": [
+        "required"
+      ],
+      "label": "",
+      "params": {},
+      "plan": {
+        "checks": [
+          {
+            "args": [],
+            "errorKey": "required",
+            "kind": "presence.required",
+            "message": "This answer is required.",
+            "params": {},
+            "skipWhenEmpty": false,
+            "validator": "required"
+          }
+        ],
+        "choices": [],
+        "condition": "",
+        "key": "answer",
+        "type": "multiple_choice",
+        "usesContext": false
+      },
+      "questionType": "multiple_choice",
+      "validator": "required",
+      "value": []
+    },
+    {
+      "expects": [],
+      "label": "",
+      "params": {},
+      "plan": {
+        "checks": [
+          {
+            "args": [],
+            "errorKey": "required",
+            "kind": "presence.required",
+            "message": "This answer is required.",
+            "params": {},
+            "skipWhenEmpty": false,
+            "validator": "required"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "free_text",
+        "usesContext": false
+      },
+      "questionType": "free_text",
+      "validator": "required",
+      "value": "Hugo"
+    },
+    {
+      "expects": [],
+      "label": "zero is an answer",
+      "params": {},
+      "plan": {
+        "checks": [
+          {
+            "args": [],
+            "errorKey": "required",
+            "kind": "presence.required",
+            "message": "This answer is required.",
+            "params": {},
+            "skipWhenEmpty": false,
+            "validator": "required"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "number",
+        "usesContext": false
+      },
+      "questionType": "number",
+      "validator": "required",
+      "value": 0
+    },
+    {
+      "expects": [],
+      "label": "a no is an answer",
+      "params": {},
+      "plan": {
+        "checks": [
+          {
+            "args": [],
+            "errorKey": "required",
+            "kind": "presence.required",
+            "message": "This answer is required.",
+            "params": {},
+            "skipWhenEmpty": false,
+            "validator": "required"
+          }
+        ],
+        "choices": [],
+        "condition": "",
+        "key": "answer",
+        "type": "single_choice",
+        "usesContext": false
+      },
+      "questionType": "single_choice",
+      "validator": "required",
+      "value": "no"
+    },
+    {
+      "expects": [],
+      "label": "",
+      "params": {
+        "prefix": "PR-"
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              "PR-"
+            ],
+            "errorKey": "not_starts_with",
+            "kind": "string.startsWith",
+            "message": "This must start with {prefix}.",
+            "params": {
+              "prefix": "PR-"
+            },
+            "skipWhenEmpty": true,
+            "validator": "starts_with"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "free_text",
+        "usesContext": false
+      },
+      "questionType": "free_text",
+      "validator": "starts_with",
+      "value": "PR-1"
+    },
+    {
+      "expects": [
+        "not_starts_with"
+      ],
+      "label": "",
+      "params": {
+        "prefix": "PR-"
+      },
+      "plan": {
+        "checks": [
+          {
+            "args": [
+              "PR-"
+            ],
+            "errorKey": "not_starts_with",
+            "kind": "string.startsWith",
+            "message": "This must start with {prefix}.",
+            "params": {
+              "prefix": "PR-"
+            },
+            "skipWhenEmpty": true,
+            "validator": "starts_with"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "free_text",
+        "usesContext": false
+      },
+      "questionType": "free_text",
+      "validator": "starts_with",
+      "value": "XX-1"
+    },
+    {
+      "expects": [],
+      "label": "",
+      "params": {},
+      "plan": {
+        "checks": [
+          {
+            "args": [],
+            "errorKey": "duplicate_items",
+            "kind": "array.unique",
+            "message": "Every entry must be different.",
+            "params": {},
+            "skipWhenEmpty": true,
+            "validator": "unique_items"
+          }
+        ],
+        "choices": [],
+        "condition": "",
+        "key": "answer",
+        "type": "multiple_choice",
+        "usesContext": false
+      },
+      "questionType": "multiple_choice",
+      "validator": "unique_items",
+      "value": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "expects": [
+        "duplicate_items"
+      ],
+      "label": "",
+      "params": {},
+      "plan": {
+        "checks": [
+          {
+            "args": [],
+            "errorKey": "duplicate_items",
+            "kind": "array.unique",
+            "message": "Every entry must be different.",
+            "params": {},
+            "skipWhenEmpty": true,
+            "validator": "unique_items"
+          }
+        ],
+        "choices": [],
+        "condition": "",
+        "key": "answer",
+        "type": "multiple_choice",
+        "usesContext": false
+      },
+      "questionType": "multiple_choice",
+      "validator": "unique_items",
+      "value": [
+        "a",
+        "a"
+      ]
+    },
+    {
+      "expects": [
+        "duplicate_items"
+      ],
+      "label": "entries compare by content, not identity",
+      "params": {},
+      "plan": {
+        "checks": [
+          {
+            "args": [],
+            "errorKey": "duplicate_items",
+            "kind": "array.unique",
+            "message": "Every entry must be different.",
+            "params": {},
+            "skipWhenEmpty": true,
+            "validator": "unique_items"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "item_list",
+        "usesContext": false
+      },
+      "questionType": "item_list",
+      "validator": "unique_items",
+      "value": [
+        {
+          "x": 1
+        },
+        {
+          "x": 1
+        }
+      ]
+    },
+    {
+      "expects": [],
+      "label": "",
+      "params": {},
+      "plan": {
+        "checks": [
+          {
+            "args": [],
+            "errorKey": "invalid_url",
+            "kind": "string.url",
+            "message": "Enter a valid URL.",
+            "params": {},
+            "skipWhenEmpty": true,
+            "validator": "url"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "free_text",
+        "usesContext": false
+      },
+      "questionType": "free_text",
+      "validator": "url",
+      "value": "https://vinta.com.br/blog"
+    },
+    {
+      "expects": [
+        "invalid_url"
+      ],
+      "label": "a scheme is required",
+      "params": {},
+      "plan": {
+        "checks": [
+          {
+            "args": [],
+            "errorKey": "invalid_url",
+            "kind": "string.url",
+            "message": "Enter a valid URL.",
+            "params": {},
+            "skipWhenEmpty": true,
+            "validator": "url"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "free_text",
+        "usesContext": false
+      },
+      "questionType": "free_text",
+      "validator": "url",
+      "value": "vinta.com.br"
+    },
+    {
+      "expects": [],
+      "label": "",
+      "params": {},
+      "plan": {
+        "checks": [
+          {
+            "args": [],
+            "errorKey": "invalid_uuid",
+            "kind": "string.uuid",
+            "message": "Enter a valid UUID.",
+            "params": {},
+            "skipWhenEmpty": true,
+            "validator": "uuid"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "free_text",
+        "usesContext": false
+      },
+      "questionType": "free_text",
+      "validator": "uuid",
+      "value": "4f1a7c2e-9b3d-4e5f-8a6b-0c1d2e3f4a5b"
+    },
+    {
+      "expects": [
+        "invalid_uuid"
+      ],
+      "label": "",
+      "params": {},
+      "plan": {
+        "checks": [
+          {
+            "args": [],
+            "errorKey": "invalid_uuid",
+            "kind": "string.uuid",
+            "message": "Enter a valid UUID.",
+            "params": {},
+            "skipWhenEmpty": true,
+            "validator": "uuid"
+          }
+        ],
+        "condition": "",
+        "key": "answer",
+        "type": "free_text",
+        "usesContext": false
+      },
+      "questionType": "free_text",
+      "validator": "uuid",
+      "value": "4f1a7c2e"
+    }
+  ],
+  "planVersion": 1
+}

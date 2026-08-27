@@ -1,0 +1,884 @@
+{
+  "planVersion": 1,
+  "validators": [
+    {
+      "client": {
+        "checks": [
+          {
+            "args": [
+              "content_types"
+            ],
+            "errorKey": "unsupported_file_type",
+            "kind": "file.contentType"
+          }
+        ],
+        "mode": "checks"
+      },
+      "errorKeys": {
+        "invalid_type": "Attach a file.",
+        "unsupported_file_type": "{name} is not an accepted file type."
+      },
+      "key": "allowed_content_types",
+      "label": "Allowed file types",
+      "paramsSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "content_types": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "content_types"
+        ],
+        "type": "object"
+      },
+      "readsContext": false,
+      "skipWhenEmpty": true,
+      "supportedQuestionTypes": [
+        "multiple_files",
+        "single_file"
+      ]
+    },
+    {
+      "client": {
+        "checks": [
+          {
+            "args": [],
+            "errorKey": "invalid_email",
+            "kind": "string.email"
+          }
+        ],
+        "mode": "checks"
+      },
+      "errorKeys": {
+        "invalid_email": "Enter a valid email address.",
+        "invalid_type": "Enter text."
+      },
+      "key": "email",
+      "label": "Email",
+      "paramsSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "readsContext": false,
+      "skipWhenEmpty": true,
+      "supportedQuestionTypes": [
+        "free_text",
+        "url"
+      ]
+    },
+    {
+      "client": {
+        "checks": [
+          {
+            "args": [
+              "suffix"
+            ],
+            "errorKey": "not_ends_with",
+            "kind": "string.endsWith"
+          }
+        ],
+        "mode": "checks"
+      },
+      "errorKeys": {
+        "invalid_type": "Enter text.",
+        "not_ends_with": "This must end with {suffix}."
+      },
+      "key": "ends_with",
+      "label": "Ends with",
+      "paramsSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "suffix": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "suffix"
+        ],
+        "type": "object"
+      },
+      "readsContext": false,
+      "skipWhenEmpty": true,
+      "supportedQuestionTypes": [
+        "free_text",
+        "url"
+      ]
+    },
+    {
+      "client": {
+        "checks": [
+          {
+            "args": [
+              "substring"
+            ],
+            "errorKey": "does_not_include",
+            "kind": "string.includes"
+          }
+        ],
+        "mode": "checks"
+      },
+      "errorKeys": {
+        "does_not_include": "This must contain {substring}.",
+        "invalid_type": "Enter text."
+      },
+      "key": "includes",
+      "label": "Includes",
+      "paramsSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "substring": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "substring"
+        ],
+        "type": "object"
+      },
+      "readsContext": false,
+      "skipWhenEmpty": true,
+      "supportedQuestionTypes": [
+        "free_text",
+        "url"
+      ]
+    },
+    {
+      "client": {
+        "checks": [
+          {
+            "args": [],
+            "errorKey": "not_integer",
+            "kind": "number.int"
+          }
+        ],
+        "mode": "checks"
+      },
+      "errorKeys": {
+        "invalid_type": "Enter a number.",
+        "not_integer": "Enter a whole number."
+      },
+      "key": "integer",
+      "label": "Whole number",
+      "paramsSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "readsContext": false,
+      "skipWhenEmpty": true,
+      "supportedQuestionTypes": [
+        "number",
+        "time_duration",
+        "year"
+      ]
+    },
+    {
+      "client": {
+        "checks": [
+          {
+            "args": [
+              "expression"
+            ],
+            "errorKey": "predicate_failed",
+            "kind": "logic.jmespath"
+          }
+        ],
+        "mode": "checks"
+      },
+      "errorKeys": {
+        "predicate_failed": "This answer is not valid here."
+      },
+      "key": "jmespath_predicate",
+      "label": "Expression",
+      "paramsSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "expression": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "expression"
+        ],
+        "type": "object"
+      },
+      "readsContext": true,
+      "skipWhenEmpty": true,
+      "supportedQuestionTypes": null
+    },
+    {
+      "client": {
+        "checks": [
+          {
+            "args": [
+              "maximum"
+            ],
+            "errorKey": "date_too_late",
+            "kind": "date.max"
+          }
+        ],
+        "mode": "checks"
+      },
+      "errorKeys": {
+        "date_too_late": "Choose {maximum} or earlier.",
+        "invalid_type": "Enter a valid date or time."
+      },
+      "key": "max_date",
+      "label": "Not after",
+      "paramsSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "maximum": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "maximum"
+        ],
+        "type": "object"
+      },
+      "readsContext": false,
+      "skipWhenEmpty": true,
+      "supportedQuestionTypes": [
+        "date",
+        "date_time",
+        "month",
+        "time"
+      ]
+    },
+    {
+      "client": {
+        "checks": [
+          {
+            "args": [
+              "max_bytes"
+            ],
+            "errorKey": "file_too_large",
+            "kind": "file.maxSize"
+          }
+        ],
+        "mode": "checks"
+      },
+      "errorKeys": {
+        "file_too_large": "{name} is over the {max_bytes} byte limit.",
+        "invalid_type": "Attach a file."
+      },
+      "key": "max_file_size",
+      "label": "Maximum file size",
+      "paramsSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "max_bytes": {
+            "exclusiveMinimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "max_bytes"
+        ],
+        "type": "object"
+      },
+      "readsContext": false,
+      "skipWhenEmpty": true,
+      "supportedQuestionTypes": [
+        "multiple_files",
+        "single_file"
+      ]
+    },
+    {
+      "client": {
+        "checks": [
+          {
+            "args": [
+              "maximum"
+            ],
+            "errorKey": "too_many_items",
+            "kind": "array.max"
+          }
+        ],
+        "mode": "checks"
+      },
+      "errorKeys": {
+        "invalid_type": "Enter a list of values.",
+        "too_many_items": "Choose at most {maximum}."
+      },
+      "key": "max_items",
+      "label": "Maximum items",
+      "paramsSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "maximum": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "maximum"
+        ],
+        "type": "object"
+      },
+      "readsContext": false,
+      "skipWhenEmpty": true,
+      "supportedQuestionTypes": [
+        "item_list",
+        "multi_select",
+        "multiple_choice",
+        "multiple_files",
+        "sub_questionnaire_list"
+      ]
+    },
+    {
+      "client": {
+        "checks": [
+          {
+            "args": [
+              "maximum"
+            ],
+            "errorKey": "too_long",
+            "kind": "string.max"
+          }
+        ],
+        "mode": "checks"
+      },
+      "errorKeys": {
+        "invalid_type": "Enter text.",
+        "too_long": "Use at most {maximum} characters."
+      },
+      "key": "max_length",
+      "label": "Maximum length",
+      "paramsSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "maximum": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "maximum"
+        ],
+        "type": "object"
+      },
+      "readsContext": false,
+      "skipWhenEmpty": true,
+      "supportedQuestionTypes": [
+        "free_text",
+        "url"
+      ]
+    },
+    {
+      "client": {
+        "checks": [
+          {
+            "args": [
+              "maximum"
+            ],
+            "errorKey": "too_large",
+            "kind": "number.lte"
+          }
+        ],
+        "mode": "checks"
+      },
+      "errorKeys": {
+        "invalid_type": "Enter a number.",
+        "too_large": "Enter {maximum} or less."
+      },
+      "key": "max_value",
+      "label": "Maximum value",
+      "paramsSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "exclusive": {
+            "type": "boolean"
+          },
+          "maximum": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "maximum"
+        ],
+        "type": "object"
+      },
+      "readsContext": false,
+      "skipWhenEmpty": true,
+      "supportedQuestionTypes": [
+        "number",
+        "time_duration",
+        "year"
+      ]
+    },
+    {
+      "client": {
+        "checks": [
+          {
+            "args": [
+              "minimum"
+            ],
+            "errorKey": "date_too_early",
+            "kind": "date.min"
+          }
+        ],
+        "mode": "checks"
+      },
+      "errorKeys": {
+        "date_too_early": "Choose {minimum} or later.",
+        "invalid_type": "Enter a valid date or time."
+      },
+      "key": "min_date",
+      "label": "Not before",
+      "paramsSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "minimum": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "minimum"
+        ],
+        "type": "object"
+      },
+      "readsContext": false,
+      "skipWhenEmpty": true,
+      "supportedQuestionTypes": [
+        "date",
+        "date_time",
+        "month",
+        "time"
+      ]
+    },
+    {
+      "client": {
+        "checks": [
+          {
+            "args": [
+              "minimum"
+            ],
+            "errorKey": "too_few_items",
+            "kind": "array.min"
+          }
+        ],
+        "mode": "checks"
+      },
+      "errorKeys": {
+        "invalid_type": "Enter a list of values.",
+        "too_few_items": "Choose at least {minimum}."
+      },
+      "key": "min_items",
+      "label": "Minimum items",
+      "paramsSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "minimum": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "minimum"
+        ],
+        "type": "object"
+      },
+      "readsContext": false,
+      "skipWhenEmpty": true,
+      "supportedQuestionTypes": [
+        "item_list",
+        "multi_select",
+        "multiple_choice",
+        "multiple_files",
+        "sub_questionnaire_list"
+      ]
+    },
+    {
+      "client": {
+        "checks": [
+          {
+            "args": [
+              "minimum"
+            ],
+            "errorKey": "too_short",
+            "kind": "string.min"
+          }
+        ],
+        "mode": "checks"
+      },
+      "errorKeys": {
+        "invalid_type": "Enter text.",
+        "too_short": "Use at least {minimum} characters."
+      },
+      "key": "min_length",
+      "label": "Minimum length",
+      "paramsSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "minimum": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "minimum"
+        ],
+        "type": "object"
+      },
+      "readsContext": false,
+      "skipWhenEmpty": true,
+      "supportedQuestionTypes": [
+        "free_text",
+        "url"
+      ]
+    },
+    {
+      "client": {
+        "checks": [
+          {
+            "args": [
+              "minimum"
+            ],
+            "errorKey": "too_small",
+            "kind": "number.gte"
+          }
+        ],
+        "mode": "checks"
+      },
+      "errorKeys": {
+        "invalid_type": "Enter a number.",
+        "too_small": "Enter {minimum} or more."
+      },
+      "key": "min_value",
+      "label": "Minimum value",
+      "paramsSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "exclusive": {
+            "type": "boolean"
+          },
+          "minimum": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "minimum"
+        ],
+        "type": "object"
+      },
+      "readsContext": false,
+      "skipWhenEmpty": true,
+      "supportedQuestionTypes": [
+        "number",
+        "time_duration",
+        "year"
+      ]
+    },
+    {
+      "client": {
+        "checks": [
+          {
+            "args": [
+              "step"
+            ],
+            "errorKey": "not_multiple_of",
+            "kind": "number.multipleOf"
+          }
+        ],
+        "mode": "checks"
+      },
+      "errorKeys": {
+        "invalid_type": "Enter a number.",
+        "not_multiple_of": "Enter a multiple of {step}."
+      },
+      "key": "multiple_of",
+      "label": "Multiple of",
+      "paramsSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "step": {
+            "exclusiveMinimum": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "step"
+        ],
+        "type": "object"
+      },
+      "readsContext": false,
+      "skipWhenEmpty": true,
+      "supportedQuestionTypes": [
+        "number",
+        "time_duration",
+        "year"
+      ]
+    },
+    {
+      "client": {
+        "checks": [
+          {
+            "args": [
+              "values"
+            ],
+            "errorKey": "not_allowed",
+            "kind": "value.oneOf"
+          }
+        ],
+        "mode": "checks"
+      },
+      "errorKeys": {
+        "not_allowed": "{value} is not one of the allowed values."
+      },
+      "key": "one_of",
+      "label": "Allowed values",
+      "paramsSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "values": {
+            "items": {},
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "values"
+        ],
+        "type": "object"
+      },
+      "readsContext": false,
+      "skipWhenEmpty": true,
+      "supportedQuestionTypes": null
+    },
+    {
+      "client": {
+        "checks": [
+          {
+            "args": [
+              "pattern",
+              "ignore_case"
+            ],
+            "errorKey": "pattern_mismatch",
+            "kind": "string.regex"
+          }
+        ],
+        "mode": "checks"
+      },
+      "errorKeys": {
+        "invalid_type": "Enter text.",
+        "pattern_mismatch": "This value has the wrong format."
+      },
+      "key": "pattern",
+      "label": "Pattern",
+      "paramsSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "ignore_case": {
+            "type": "boolean"
+          },
+          "pattern": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "pattern"
+        ],
+        "type": "object"
+      },
+      "readsContext": false,
+      "skipWhenEmpty": true,
+      "supportedQuestionTypes": [
+        "free_text",
+        "url"
+      ]
+    },
+    {
+      "client": {
+        "checks": [
+          {
+            "args": [],
+            "errorKey": "range_out_of_order",
+            "kind": "range.ordered"
+          }
+        ],
+        "mode": "checks"
+      },
+      "errorKeys": {
+        "incomplete_range": "Enter both a start and an end.",
+        "invalid_type": "Enter a range.",
+        "range_out_of_order": "The start must come before the end."
+      },
+      "key": "range_ordered",
+      "label": "Ordered range",
+      "paramsSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "readsContext": false,
+      "skipWhenEmpty": true,
+      "supportedQuestionTypes": [
+        "date_range",
+        "date_time_range",
+        "number_range"
+      ]
+    },
+    {
+      "client": {
+        "checks": [
+          {
+            "args": [],
+            "errorKey": "required",
+            "kind": "presence.required"
+          }
+        ],
+        "mode": "checks"
+      },
+      "errorKeys": {
+        "required": "This answer is required."
+      },
+      "key": "required",
+      "label": "Required",
+      "paramsSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "readsContext": false,
+      "skipWhenEmpty": false,
+      "supportedQuestionTypes": null
+    },
+    {
+      "client": {
+        "checks": [
+          {
+            "args": [
+              "prefix"
+            ],
+            "errorKey": "not_starts_with",
+            "kind": "string.startsWith"
+          }
+        ],
+        "mode": "checks"
+      },
+      "errorKeys": {
+        "invalid_type": "Enter text.",
+        "not_starts_with": "This must start with {prefix}."
+      },
+      "key": "starts_with",
+      "label": "Starts with",
+      "paramsSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "prefix": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "prefix"
+        ],
+        "type": "object"
+      },
+      "readsContext": false,
+      "skipWhenEmpty": true,
+      "supportedQuestionTypes": [
+        "free_text",
+        "url"
+      ]
+    },
+    {
+      "client": {
+        "checks": [
+          {
+            "args": [],
+            "errorKey": "duplicate_items",
+            "kind": "array.unique"
+          }
+        ],
+        "mode": "checks"
+      },
+      "errorKeys": {
+        "duplicate_items": "Every entry must be different.",
+        "invalid_type": "Enter a list of values."
+      },
+      "key": "unique_items",
+      "label": "No duplicates",
+      "paramsSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "readsContext": false,
+      "skipWhenEmpty": true,
+      "supportedQuestionTypes": [
+        "item_list",
+        "multi_select",
+        "multiple_choice",
+        "multiple_files",
+        "sub_questionnaire_list"
+      ]
+    },
+    {
+      "client": {
+        "checks": [
+          {
+            "args": [],
+            "errorKey": "invalid_url",
+            "kind": "string.url"
+          }
+        ],
+        "mode": "checks"
+      },
+      "errorKeys": {
+        "invalid_type": "Enter text.",
+        "invalid_url": "Enter a valid URL."
+      },
+      "key": "url",
+      "label": "URL",
+      "paramsSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "readsContext": false,
+      "skipWhenEmpty": true,
+      "supportedQuestionTypes": [
+        "free_text",
+        "url"
+      ]
+    },
+    {
+      "client": {
+        "checks": [
+          {
+            "args": [],
+            "errorKey": "invalid_uuid",
+            "kind": "string.uuid"
+          }
+        ],
+        "mode": "checks"
+      },
+      "errorKeys": {
+        "invalid_type": "Enter text.",
+        "invalid_uuid": "Enter a valid UUID."
+      },
+      "key": "uuid",
+      "label": "UUID",
+      "paramsSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "readsContext": false,
+      "skipWhenEmpty": true,
+      "supportedQuestionTypes": [
+        "free_text",
+        "url"
+      ]
+    }
+  ]
+}

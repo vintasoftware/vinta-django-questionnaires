@@ -1,0 +1,40 @@
+{% load i18n %}
+{% comment %}
+  A choice or a validator: a flat row, with whatever is left behind a
+  disclosure. These have no children, so they need no nesting of their own.
+{% endcomment %}
+<div class="vqa-item{% if not form.instance.pk %} vqa-item--new{% endif %}">
+  <div class="vqa-row vqa-row--item">
+    <span class="vqa-row__grip" data-vqa-handle title="{% translate 'Drag to reorder' %}" aria-hidden="true">⠿</span>
+    <span class="vqa-row__fields">
+      {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+      {% for field in form.summary %}
+        <span class="vqa-field vqa-field--{{ field.name }}{% if field.errors %} vqa-field--invalid{% endif %}">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {{ field.errors }}
+        </span>
+      {% endfor %}
+      {% if not form.instance.pk %}<span class="vqa-new-hint">{% blocktranslate %}new {{ label }}{% endblocktranslate %}</span>{% endif %}
+    </span>
+    <span class="vqa-row__controls">
+      {% if form.DELETE %}
+        <label class="vqa-delete">{{ form.DELETE }} <span>{% translate "Delete" %}</span></label>
+      {% endif %}
+    </span>
+  </div>
+  <details class="vqa-item__more">
+    <summary>{% translate "More" %}</summary>
+    <div class="vqa-fields">
+      {% for field in form.rest %}
+        <div class="vqa-field{% if field.errors %} vqa-field--invalid{% endif %}">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}<span class="help">{{ field.help_text }}</span>{% endif %}
+          {{ field.errors }}
+        </div>
+      {% endfor %}
+      {% if form.non_field_errors %}{{ form.non_field_errors }}{% endif %}
+    </div>
+  </details>
+</div>

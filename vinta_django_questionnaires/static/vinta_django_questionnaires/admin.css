@@ -1,0 +1,475 @@
+/*
+ * The structure editor and the response table.
+ *
+ * Every colour comes from a `--vqa-` token, and each of those maps onto the
+ * Django admin's own -- so this follows the admin's light and dark themes, and
+ * any project that has retinted them, rather than being a second theme to keep
+ * in step with the first.
+ *
+ * Each mapping carries a fallback, because a project that has replaced the
+ * admin's stylesheet has none of those properties: django-unfold, for one,
+ * ships its own token names and defines not a single one of Django's. Without
+ * the fallbacks every rule referring to one is invalid at computed-value time,
+ * which silently collapses `border: 1px solid var(--hairline-color)` to no
+ * border at all. The fallbacks are deliberately translucent greys so they read
+ * on a light theme and a dark one alike.
+ */
+
+:root {
+  --vqa-gap: 0.75rem;
+  --vqa-radius: 4px;
+
+  --vqa-fg: var(--body-fg, currentColor);
+  --vqa-bg: var(--body-bg, transparent);
+  /* The fallbacks are mixed out of `currentColor` rather than being fixed
+     greys: a fixed grey that reads on white fails on a dark theme and the
+     other way round, whereas the text colour contrasts with its background by
+     definition, whichever theme is in force. */
+  --vqa-muted: var(--body-quiet-color, color-mix(in srgb, currentColor 72%, transparent));
+  --vqa-hairline: var(--hairline-color, color-mix(in srgb, currentColor 22%, transparent));
+  --vqa-border: var(--border-color, color-mix(in srgb, currentColor 42%, transparent));
+  --vqa-sunken: var(--darkened-bg, color-mix(in srgb, currentColor 7%, transparent));
+  --vqa-selected: var(--selected-row, color-mix(in srgb, currentColor 12%, transparent));
+  --vqa-danger: var(--error-fg, color-mix(in srgb, #e5484d 68%, currentColor));
+}
+
+.vqa {
+  color: var(--vqa-fg);
+}
+
+.vqa * {
+  box-sizing: border-box;
+}
+
+/* ------------------------------------------------------------- the toolbar */
+
+.vqa-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--vqa-gap);
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  background: var(--vqa-sunken);
+  border: 1px solid var(--vqa-hairline);
+  border-radius: var(--vqa-radius);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.vqa-toolbar__title,
+.vqa-toolbar__actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.vqa-jump {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 0.625rem 1rem;
+  margin-bottom: 1rem;
+  background: var(--vqa-sunken);
+  border: 1px solid var(--vqa-hairline);
+  border-radius: var(--vqa-radius);
+}
+
+/* A secondary button.
+ *
+ * Deliberately the text pair rather than --button-fg on --button-bg: that
+ * combination measures about 3:1 in the admin's dark theme, below AA for text
+ * this size. And qualified with the element and the link pseudo-classes,
+ * because the admin's own `a:link` out-specifies a bare class. */
+a.vqa-link,
+a.vqa-link:link,
+a.vqa-link:visited {
+  display: inline-block;
+  padding: 0.25rem 0.625rem;
+  border: 1px solid var(--vqa-border);
+  border-radius: var(--vqa-radius);
+  background: var(--vqa-bg);
+  color: var(--vqa-fg);
+  text-decoration: none;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+a.vqa-link:hover,
+a.vqa-link:focus {
+  background: var(--vqa-sunken);
+  color: var(--vqa-fg);
+  border-color: var(--vqa-muted);
+}
+
+.vqa-badge {
+  display: inline-block;
+  padding: 0 0.5rem;
+  border: 1px solid var(--vqa-hairline);
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  color: var(--vqa-muted);
+  white-space: nowrap;
+}
+
+.vqa-quiet {
+  color: var(--vqa-muted);
+}
+
+/* -------------------------------------------------------------- the notice */
+
+.vqa-notice {
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--vqa-border);
+  border-left: 4px solid var(--vqa-danger);
+  border-radius: var(--vqa-radius);
+  background: var(--vqa-sunken);
+}
+
+.vqa-notice p {
+  margin: 0 0 0.5rem;
+}
+
+.vqa-check,
+.vqa-reason {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.vqa-errors {
+  margin-bottom: 1rem;
+}
+
+/* ---------------------------------------------------------------- the tree */
+
+.vqa-node {
+  border: 1px solid var(--vqa-hairline);
+  border-radius: var(--vqa-radius);
+  margin-bottom: 0.5rem;
+  background: var(--vqa-bg);
+}
+
+.vqa-node--page > summary {
+  background: var(--vqa-sunken);
+  font-weight: 600;
+}
+
+.vqa-node--new {
+  border-style: dashed;
+  padding: 0.75rem;
+}
+
+.vqa-new-label {
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+  color: var(--vqa-muted);
+}
+
+.vqa-new-hint {
+  font-size: 0.6875rem;
+  color: var(--vqa-muted);
+  align-self: center;
+}
+
+.vqa-row {
+  display: flex;
+  gap: var(--vqa-gap);
+  align-items: flex-end;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.vqa-row::-webkit-details-marker {
+  display: none;
+}
+
+.vqa-row--item {
+  cursor: default;
+}
+
+.vqa-row__caret {
+  align-self: center;
+  color: var(--vqa-muted);
+  font-size: 1.125rem;
+  line-height: 1;
+  transition: transform 0.1s ease;
+}
+
+details[open] > .vqa-row > .vqa-row__caret {
+  transform: rotate(90deg);
+}
+
+.vqa-row__count {
+  align-self: center;
+}
+
+.vqa-row__grip {
+  cursor: grab;
+  color: var(--vqa-muted);
+  align-self: center;
+  padding: 0 0.125rem;
+}
+
+.vqa-row__fields {
+  display: flex;
+  gap: var(--vqa-gap);
+  flex-wrap: wrap;
+  align-items: flex-end;
+  flex: 1;
+  min-width: 0;
+  cursor: auto;
+}
+
+.vqa-row__controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  cursor: auto;
+}
+
+.vqa-body {
+  padding: 0 0.75rem 0.75rem 1.5rem;
+  border-top: 1px solid var(--vqa-hairline);
+}
+
+.vqa-children {
+  margin-top: 0.75rem;
+}
+
+/* -------------------------------------------------------------- the fields */
+
+.vqa-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--vqa-gap);
+  padding-top: 0.75rem;
+}
+
+.vqa-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+  flex: 1 1 14rem;
+}
+
+.vqa-field label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--vqa-muted);
+}
+
+.vqa-field .help {
+  font-size: 0.6875rem;
+  color: var(--vqa-muted);
+}
+
+.vqa-field--order {
+  flex: 0 0 4rem;
+}
+
+.vqa-field--key,
+.vqa-field--value,
+.vqa-field--axis,
+.vqa-field--is_active,
+.vqa-field--is_enabled {
+  flex: 0 1 10rem;
+}
+
+.vqa-field--title,
+.vqa-field--label {
+  flex: 3 1 16rem;
+}
+
+.vqa-field--invalid input,
+.vqa-field--invalid select,
+.vqa-field--invalid textarea {
+  border-color: var(--vqa-danger);
+}
+
+/* The controls are styled here rather than left to the admin's own stylesheet.
+   A replaced theme resets inputs and re-adds the styling through classes it
+   puts on its own widgets -- which these, rendered from a plain formset in a
+   template of ours, never get. Left alone they come out as bare text. */
+.vqa input[type="text"],
+.vqa input[type="number"],
+.vqa input[type="search"],
+.vqa input[type="url"],
+.vqa input[type="email"],
+.vqa select,
+.vqa textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 0.3125rem 0.5rem;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: inherit;
+  background: var(--vqa-bg);
+  border: 1px solid var(--vqa-border);
+  border-radius: var(--vqa-radius);
+}
+
+.vqa input:focus-visible,
+.vqa select:focus-visible,
+.vqa textarea:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 1px;
+}
+
+.vqa .vqa-order {
+  width: 4rem;
+}
+
+.vqa textarea {
+  min-height: 2.5rem;
+  resize: vertical;
+}
+
+.vqa-delete {
+  display: inline-flex;
+  gap: 0.25rem;
+  align-items: center;
+  font-size: 0.75rem;
+  color: var(--vqa-muted);
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------ choices and validators */
+
+.vqa-list {
+  margin-top: 1rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--vqa-hairline);
+  border-radius: var(--vqa-radius);
+  background: var(--vqa-sunken);
+}
+
+.vqa-list h4 {
+  margin: 0 0 0.25rem;
+  font-size: 0.8125rem;
+}
+
+.vqa-item {
+  border-bottom: 1px solid var(--vqa-hairline);
+  padding-bottom: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.vqa-item:last-child {
+  border-bottom: 0;
+}
+
+.vqa-item--new {
+  border-style: dashed;
+}
+
+.vqa-item__more > summary {
+  font-size: 0.75rem;
+  color: var(--vqa-muted);
+  cursor: pointer;
+  padding-left: 1.75rem;
+}
+
+.vqa-footnote {
+  margin: 1rem 0;
+}
+
+/* --------------------------------------------------------- the table view */
+
+.vqa-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--vqa-gap);
+  align-items: flex-end;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  background: var(--vqa-sunken);
+  border: 1px solid var(--vqa-hairline);
+  border-radius: var(--vqa-radius);
+}
+
+.vqa-filters .vqa-field {
+  flex: 0 1 12rem;
+}
+
+.vqa-columns {
+  flex-basis: 100%;
+}
+
+.vqa-columns > summary {
+  cursor: pointer;
+  font-size: 0.8125rem;
+}
+
+.vqa-columns__body {
+  padding-top: 0.5rem;
+}
+
+.vqa-columns__groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 1rem;
+  margin: 0.5rem 0;
+}
+
+.vqa-columns__group h4 {
+  margin: 0 0 0.25rem;
+  font-size: 0.8125rem;
+}
+
+.vqa-columns__option {
+  display: flex;
+  gap: 0.375rem;
+  align-items: center;
+  font-size: 0.8125rem;
+  padding: 0.0625rem 0;
+}
+
+.vqa-table-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--vqa-hairline);
+  border-radius: var(--vqa-radius);
+}
+
+.vqa-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.8125rem;
+}
+
+.vqa-table th,
+.vqa-table td {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--vqa-hairline);
+  white-space: nowrap;
+  vertical-align: top;
+}
+
+.vqa-table th {
+  position: sticky;
+  top: 0;
+  background: var(--vqa-sunken);
+  font-weight: 600;
+}
+
+.vqa-table tbody tr:hover {
+  background: var(--vqa-selected);
+}
+
+.vqa-paginator {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+  color: var(--vqa-muted);
+}

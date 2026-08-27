@@ -1,0 +1,181 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% comment %}
+  The whole version on one form: pages, their sections, their questions, and
+  each question's choices and validators.
+
+  Everything a person scans by -- key, title, type, order -- is on the row. The
+  rest is behind a disclosure, because a question has sixteen fields and a
+  questionnaire has fourteen questions, and showing all of that at once is the
+  same problem as making them click through five screens.
+{% endcomment %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'vinta_django_questionnaires/admin.css' %}">
+{% endblock %}
+
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% translate "Home" %}</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+    &rsaquo; <a href="{% url 'admin:vinta_django_questionnaires_questionnaireversion_changelist' %}">{% translate "Questionnaire versions" %}</a>
+    &rsaquo; <a href="{{ settings_url }}">{{ version }}</a>
+    &rsaquo; {% translate "Structure" %}
+  </div>
+{% endblock %}
+
+{% block content %}
+<div class="vqa">
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    <div class="vqa-toolbar">
+      <div class="vqa-toolbar__title">
+        <strong>{{ version }}</strong>
+        <span class="vqa-badge">{{ version.status }}</span>
+        <span class="vqa-badge">{% blocktranslate count counter=response_count %}{{ counter }} response{% plural %}{{ counter }} responses{% endblocktranslate %}</span>
+      </div>
+      <div class="vqa-toolbar__actions">
+        <a class="vqa-link" href="{{ settings_url }}">{% translate "Version settings" %}</a>
+        <a class="vqa-link" href="{{ responses_url }}">{% translate "Responses" %}</a>
+        <button type="submit" name="_continue" class="default">{% translate "Save and keep editing" %}</button>
+        <button type="submit" name="_save">{% translate "Save" %}</button>
+      </div>
+    </div>
+
+    {% if editor.errors %}
+      <ul class="errorlist vqa-errors">
+        {% for error in editor.errors %}<li>{{ error }}</li>{% endfor %}
+      </ul>
+    {% endif %}
+
+    {% if editor.requires_acknowledgement %}
+      <div class="vqa-notice">
+        <p>
+          {% blocktranslate count counter=response_count %}
+            This version already has {{ counter }} response. Changing what a question asks
+            changes what that answer means.
+          {% plural %}
+            This version already has {{ counter }} responses. Changing what a question asks
+            changes what those answers mean.
+          {% endblocktranslate %}
+          {% translate "The ordinary way to make a change like this is to fork a new draft; editing in place is allowed, and recorded." %}
+        </p>
+        {{ editor.acknowledgement.understood.errors }}
+        <p class="vqa-check">
+          {{ editor.acknowledgement.understood }}
+          <label for="{{ editor.acknowledgement.understood.id_for_label }}">{{ editor.acknowledgement.understood.label }}</label>
+        </p>
+        <p class="vqa-reason">
+          <label for="{{ editor.acknowledgement.edit_reason.id_for_label }}">{{ editor.acknowledgement.edit_reason.label }}</label>
+          {{ editor.acknowledgement.edit_reason }}
+          <span class="help">{{ editor.acknowledgement.edit_reason.help_text }}</span>
+        </p>
+      </div>
+    {% endif %}
+
+    {{ editor.pages.management_form }}
+
+    <div class="vqa-tree" data-vqa-sortable>
+      {% for page in editor.nodes %}
+        <details class="vqa-node vqa-node--page" open>
+          <summary class="vqa-row">
+            {% include "admin/vinta_django_questionnaires/_summary.html" with form=page.form label="page" count=page.summary_count %}
+          </summary>
+
+          <div class="vqa-body">
+            {% include "admin/vinta_django_questionnaires/_rest.html" with form=page.form %}
+
+            {{ page.sections.management_form }}
+            <div class="vqa-children" data-vqa-sortable>
+              {% for section in page.nodes %}
+                <details class="vqa-node vqa-node--section">
+                  <summary class="vqa-row">
+                    {% include "admin/vinta_django_questionnaires/_summary.html" with form=section.form label="section" count=section.summary_count %}
+                  </summary>
+
+                  <div class="vqa-body">
+                    {% include "admin/vinta_django_questionnaires/_rest.html" with form=section.form %}
+
+                    {{ section.questions.management_form }}
+                    <div class="vqa-children" data-vqa-sortable>
+                      {% for question in section.nodes %}
+                        <details class="vqa-node vqa-node--question">
+                          <summary class="vqa-row">
+                            {% include "admin/vinta_django_questionnaires/_summary.html" with form=question.form label="question" count=question.summary_count %}
+                          </summary>
+
+                          <div class="vqa-body">
+                            {% include "admin/vinta_django_questionnaires/_rest.html" with form=question.form %}
+
+                            <div class="vqa-list">
+                              <h4>{% translate "Choices" %}</h4>
+                              {{ question.choices.management_form }}
+                              {% for form in question.choices.forms %}
+                                {% include "admin/vinta_django_questionnaires/_item.html" with form=form label="choice" %}
+                              {% endfor %}
+                            </div>
+
+                            <div class="vqa-list">
+                              <h4>{% translate "Validators" %}</h4>
+                              <p class="help">{% translate "They run in this order, and each one sees what the ones before it recorded." %}</p>
+                              {{ question.validators.management_form }}
+                              {% for form in question.validators.forms %}
+                                {% include "admin/vinta_django_questionnaires/_item.html" with form=form label="validator" %}
+                              {% endfor %}
+                            </div>
+                          </div>
+                        </details>
+                      {% endfor %}
+
+                      {% for form in section.questions.forms %}
+                        {% if not form.instance.pk %}
+                          <div class="vqa-node vqa-node--new">
+                            <p class="vqa-new-label">{% translate "Add a question" %}</p>
+                            {% include "admin/vinta_django_questionnaires/_rest.html" with form=form new=True %}
+                          </div>
+                        {% endif %}
+                      {% endfor %}
+                    </div>
+                  </div>
+                </details>
+              {% endfor %}
+
+              {% for form in page.sections.forms %}
+                {% if not form.instance.pk %}
+                  <div class="vqa-node vqa-node--new">
+                    <p class="vqa-new-label">{% translate "Add a section" %}</p>
+                    {% include "admin/vinta_django_questionnaires/_rest.html" with form=form new=True %}
+                  </div>
+                {% endif %}
+              {% endfor %}
+            </div>
+          </div>
+        </details>
+      {% endfor %}
+
+      {% for form in editor.pages.forms %}
+        {% if not form.instance.pk %}
+          <div class="vqa-node vqa-node--new">
+            <p class="vqa-new-label">{% translate "Add a page" %}</p>
+            {% include "admin/vinta_django_questionnaires/_rest.html" with form=form new=True %}
+          </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    <p class="help vqa-footnote">
+      {% translate "A new page has nothing to hang a section off until it is saved, so adding is one save behind editing." %}
+    </p>
+
+    <div class="submit-row">
+      <button type="submit" name="_continue" class="default">{% translate "Save and keep editing" %}</button>
+      <button type="submit" name="_save">{% translate "Save" %}</button>
+    </div>
+  </form>
+</div>
+
+<script src="{% static 'vinta_django_questionnaires/admin.js' %}" defer></script>
+{% endblock %}

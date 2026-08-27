@@ -1,0 +1,27 @@
+{% load i18n %}
+{% comment %}
+  Everything a node has that is not on its row. For a new node there is no row,
+  so this renders the whole form, summary fields included.
+{% endcomment %}
+<div class="vqa-fields">
+  {% if new %}
+    {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+    {% for field in form.summary %}
+      <div class="vqa-field{% if field.errors %} vqa-field--invalid{% endif %}">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}<span class="help">{{ field.help_text }}</span>{% endif %}
+        {{ field.errors }}
+      </div>
+    {% endfor %}
+  {% endif %}
+  {% for field in form.rest %}
+    <div class="vqa-field{% if field.errors %} vqa-field--invalid{% endif %}">
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% if field.help_text %}<span class="help">{{ field.help_text }}</span>{% endif %}
+      {{ field.errors }}
+    </div>
+  {% endfor %}
+  {% if form.non_field_errors %}{{ form.non_field_errors }}{% endif %}
+</div>

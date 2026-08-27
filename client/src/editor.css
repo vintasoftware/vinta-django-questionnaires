@@ -1,0 +1,465 @@
+/**
+ * The editor's own stylesheet.
+ *
+ * Everything is scoped under `.vqe` and every colour is a custom property, so a
+ * host project can retheme it by setting those on `.vqe` -- or drop this file
+ * entirely and style the `vqe-` class names from its own design system.
+ *
+ * The palette is checked against WCAG 2.1 AA: body text on its surface is at
+ * least 4.5:1, and every control has a visible focus ring.
+ *
+ * It is light unless the host asks for dark with `data-vqe-theme="dark"` on the
+ * editor's element. It deliberately does not read `prefers-color-scheme`: the
+ * page the editor sits in decides its own theme, and an app that pins itself
+ * light on a machine set to dark would otherwise end up with a dark editor
+ * inside a light page.
+ */
+
+.vqe {
+  --vqe-surface: #ffffff;
+  --vqe-surface-sunken: #f5f6f8;
+  --vqe-surface-raised: #ffffff;
+  --vqe-border: #d3d7de;
+  --vqe-text: #16191f;
+  --vqe-text-muted: #4f5661; /* 7.4:1 on the sunken surface */
+  --vqe-accent: #1c4fd8;
+  --vqe-accent-text: #ffffff;
+  --vqe-danger: #a3161d;
+  --vqe-warn-surface: #fdf3d7;
+  --vqe-warn-border: #d9ac33;
+  --vqe-error-surface: #fdeeee;
+  --vqe-radius: 6px;
+  --vqe-gap: 0.75rem;
+
+  color: var(--vqe-text);
+  background: var(--vqe-surface);
+  font-family: inherit;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.vqe[data-vqe-theme="dark"] {
+  --vqe-surface: #14171c;
+  --vqe-surface-sunken: #1b1f26;
+  --vqe-surface-raised: #21262e;
+  --vqe-border: #39414d;
+  --vqe-text: #eef1f5;
+  --vqe-text-muted: #aeb6c2;
+  --vqe-accent: #7ea6ff;
+  --vqe-accent-text: #10131a;
+  --vqe-danger: #ff9a9f;
+  --vqe-warn-surface: #3a3115;
+  --vqe-warn-border: #a5842c;
+  --vqe-error-surface: #3a1b1d;
+}
+
+.vqe *,
+.vqe *::before,
+.vqe *::after {
+  box-sizing: border-box;
+}
+
+.vqe :focus-visible {
+  outline: 2px solid var(--vqe-accent);
+  outline-offset: 2px;
+}
+
+/* -------------------------------------------------------------- the frame */
+
+.vqe--loading,
+.vqe--error {
+  padding: 1.5rem;
+  color: var(--vqe-text-muted);
+  display: flex;
+  gap: var(--vqe-gap);
+  align-items: center;
+}
+
+.vqe__bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--vqe-gap);
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--vqe-border);
+  background: var(--vqe-surface-sunken);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.vqe__bar-title,
+.vqe__bar-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.vqe__notice {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--vqe-border);
+  background: var(--vqe-surface-sunken);
+}
+
+.vqe__notice p {
+  margin: 0 0 0.5rem;
+}
+
+.vqe__notice ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.vqe__notice--warn {
+  background: var(--vqe-warn-surface);
+  border-bottom-color: var(--vqe-warn-border);
+}
+
+.vqe__notice--error {
+  background: var(--vqe-error-surface);
+  border-bottom-color: var(--vqe-danger);
+}
+
+.vqe__body {
+  display: grid;
+  grid-template-columns: minmax(200px, 300px) minmax(0, 1fr);
+  align-items: start;
+  min-height: 0;
+}
+
+@media (max-width: 720px) {
+  .vqe__body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.vqe__inspector {
+  padding: 1rem 1.25rem 3rem;
+  min-width: 0;
+}
+
+/* ------------------------------------------------------------- the outline */
+
+.vqe-outline {
+  padding: 0.75rem;
+  border-right: 1px solid var(--vqe-border);
+  background: var(--vqe-surface-sunken);
+  /* A long questionnaire makes for a long inspector; the outline stays put and
+     scrolls on its own rather than stretching to match it. */
+  position: sticky;
+  top: 0;
+  max-height: 100vh;
+  overflow-y: auto;
+}
+
+@media (max-width: 720px) {
+  .vqe-outline {
+    position: static;
+    max-height: none;
+    border-right: 0;
+    border-bottom: 1px solid var(--vqe-border);
+  }
+}
+
+.vqe-outline__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.vqe-outline__list--nested {
+  margin-left: 0.75rem;
+  padding-left: 0.5rem;
+  border-left: 1px solid var(--vqe-border);
+}
+
+.vqe-outline__row {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: var(--vqe-radius);
+  width: 100%;
+}
+
+.vqe-outline__row.is-selected {
+  background: var(--vqe-surface-raised);
+  box-shadow: inset 0 0 0 1px var(--vqe-border);
+}
+
+.vqe-outline__row--version {
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  padding: 0.375rem 0.5rem;
+  text-align: left;
+  margin-bottom: 0.5rem;
+}
+
+.vqe-outline__button {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  padding: 0.375rem 0.5rem;
+  cursor: pointer;
+  border-radius: var(--vqe-radius);
+}
+
+.vqe-outline__title {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vqe-outline__meta,
+.vqe-outline__badges {
+  color: var(--vqe-text-muted);
+  font-size: 0.75rem;
+  display: inline-flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.vqe-outline__flag {
+  color: var(--vqe-danger);
+  font-weight: 700;
+  margin-right: 0.25rem;
+}
+
+/* Drag to reorder. The handle is the only thing that drags, so a click on a
+   row still selects it. */
+.vqe-handle {
+  border: 1px solid transparent;
+  background: none;
+  color: var(--vqe-text-muted);
+  cursor: grab;
+  border-radius: var(--vqe-radius);
+  padding: 0.125rem 0.25rem;
+  font-size: 0.875rem;
+  line-height: 1.2;
+  touch-action: none;
+  flex: 0 0 auto;
+  align-self: center;
+}
+
+.vqe-handle:hover {
+  color: var(--vqe-text);
+  border-color: var(--vqe-border);
+}
+
+.vqe-handle:active {
+  cursor: grabbing;
+}
+
+.is-dragging .vqe-outline__row,
+.is-dragging.vqe-row,
+.is-dragging .vqe-card {
+  background: var(--vqe-surface-raised);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 18%);
+  border-radius: var(--vqe-radius);
+}
+
+.vqe-outline__controls,
+.vqe-item-controls {
+  display: inline-flex;
+  gap: 0.125rem;
+}
+
+.vqe-outline__controls button,
+.vqe-item-controls button {
+  border: 1px solid transparent;
+  background: none;
+  color: var(--vqe-text-muted);
+  cursor: pointer;
+  border-radius: var(--vqe-radius);
+  padding: 0.125rem 0.375rem;
+  font-size: 0.875rem;
+  line-height: 1.2;
+}
+
+.vqe-outline__controls button:hover,
+.vqe-item-controls button:hover {
+  color: var(--vqe-text);
+  border-color: var(--vqe-border);
+}
+
+/* --------------------------------------------------------------- the forms */
+
+.vqe-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vqe-gap);
+  max-width: 60rem;
+}
+
+.vqe-form__header h2 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.vqe-form__hint,
+.vqe-field__hint {
+  margin: 0.25rem 0 0;
+  color: var(--vqe-text-muted);
+  font-size: 0.8125rem;
+}
+
+.vqe-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  flex: 1 1 12rem;
+}
+
+.vqe-field--inline {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0.5rem;
+  flex-basis: 100%;
+}
+
+.vqe-field__label {
+  font-weight: 600;
+  font-size: 0.8125rem;
+}
+
+.vqe-input {
+  font: inherit;
+  color: var(--vqe-text);
+  background: var(--vqe-surface-raised);
+  border: 1px solid var(--vqe-border);
+  border-radius: var(--vqe-radius);
+  padding: 0.375rem 0.5rem;
+  width: 100%;
+}
+
+.vqe-input--mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8125rem;
+}
+
+.vqe-textarea {
+  resize: vertical;
+}
+
+.vqe-field--invalid .vqe-input {
+  border-color: var(--vqe-danger);
+}
+
+.vqe-checkbox {
+  margin-top: 0.25rem;
+  accent-color: var(--vqe-accent);
+}
+
+.vqe-errors {
+  margin: 0.25rem 0 0;
+  padding-left: 1.1rem;
+  color: var(--vqe-danger);
+  font-size: 0.8125rem;
+}
+
+.vqe-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--vqe-gap);
+  align-items: flex-end;
+}
+
+.vqe-fieldset {
+  border: 1px solid var(--vqe-border);
+  border-radius: var(--vqe-radius);
+  padding: 0.75rem 1rem 1rem;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--vqe-gap);
+  min-width: 0;
+}
+
+.vqe-fieldset--tight {
+  background: var(--vqe-surface-sunken);
+}
+
+.vqe-fieldset__legend {
+  font-weight: 600;
+  font-size: 0.8125rem;
+  padding: 0 0.25rem;
+}
+
+.vqe-card {
+  border: 1px solid var(--vqe-border);
+  border-radius: var(--vqe-radius);
+  background: var(--vqe-surface-raised);
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.vqe-badge {
+  display: inline-block;
+  border: 1px solid var(--vqe-border);
+  border-radius: 999px;
+  padding: 0 0.5rem;
+  font-size: 0.6875rem;
+  color: var(--vqe-text-muted);
+  white-space: nowrap;
+}
+
+.vqe-badge--warn {
+  border-color: var(--vqe-warn-border);
+  background: var(--vqe-warn-surface);
+  color: var(--vqe-text);
+}
+
+.vqe-button {
+  font: inherit;
+  font-size: 0.875rem;
+  border: 1px solid var(--vqe-border);
+  background: var(--vqe-surface-raised);
+  color: var(--vqe-text);
+  border-radius: var(--vqe-radius);
+  padding: 0.3125rem 0.75rem;
+  cursor: pointer;
+}
+
+.vqe-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.vqe-button--primary {
+  background: var(--vqe-accent);
+  border-color: var(--vqe-accent);
+  color: var(--vqe-accent-text);
+  font-weight: 600;
+}
+
+.vqe-button--danger {
+  color: var(--vqe-danger);
+}
+
+.vqe-button--quiet {
+  border-style: dashed;
+  color: var(--vqe-text-muted);
+  background: none;
+}
+
+.vqe code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8125rem;
+}

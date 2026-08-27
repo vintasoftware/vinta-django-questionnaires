@@ -1,0 +1,1456 @@
+# The HTTP surface of vinta-django-questionnaires.
+#
+# There are two URL modules, and they are not for the same people:
+#
+#   path("api/questionnaires/", include("vinta_django_questionnaires.urls"))
+#   path("api/authoring/",      include("vinta_django_questionnaires.editor_urls"))
+#
+# The first is what a respondent's browser talks to; the second is the back
+# office the React editor and the responses table talk to.  Both are opt-in --
+# a project includes them where it wants them -- so the paths below are written
+# relative to those two prefixes and the `basePath` server variable is what you
+# set to match your own `urls.py`.
+#
+# Access is a method rather than a setting.  `ResponseAccessMixin.check_access`
+# defaults to an authenticated respondent who sees only their own responses;
+# `AuthoringAccessMixin.check_access` defaults to `request.user.is_staff`.  Both
+# are meant to be overridden, so the security schemes here describe the
+# defaults, not a rule the package enforces on your behalf.
+
+openapi: 3.1.0
+
+info:
+  title: Vinta Django Questionnaires
+  version: "0.1.0"
+  summary: Versioned questionnaires, the responses given to them, and the API that authors both.
+  description: |
+    Two APIs over one set of models.
+
+    **The response API** is what a respondent fills a questionnaire in through.
+    A response is pushed a page at a time and each page is validated on its
+    own; the rules come down as a *validation plan* the browser rebuilds as a
+    Zod schema, so the same rule runs on both sides and the server has the last
+    word.
+
+    **The authoring API** is what a questionnaire is written with. It reads a
+    version as an editable *definition document*, writes one back whole or not
+    at all, forks a version into a new draft, and serves the responses as a
+    table with a CSV export of the same columns.
+
+    Two shapes worth keeping apart:
+
+    - a **plan** is resolved and flattened for rendering, and is what
+      `/responses/` hands back;
+    - a **document** keeps every field as its author set it -- the columns a
+      layer *declares* rather than the ones it resolves to, an empty widget
+      where the author left the type's default -- and is what the editor reads
+      and sends.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  contact:
+    name: Vinta Software
+    url: https://github.com/vintasoftware/vinta-django-questionnaires
+
+servers:
+  - url: "{scheme}://{host}{basePath}"
+    description: Wherever the project included the URLs.
+    variables:
+      scheme:
+        default: https
+        enum: [http, https]
+      host:
+        default: localhost:8000
+      basePath:
+        default: ""
+        description: >-
+          The prefix in front of both modules, if they share one. The paths
+          below already carry `api/questionnaires/` and `api/authoring/`.
+
+tags:
+  - name: Responses
+    description: Filling a questionnaire in, a page at a time.
+  - name: Value sets
+    description: Where a select gets its options.
+  - name: Authoring
+    description: Reading and writing questionnaire definitions.
+  - name: Reporting
+    description: Responses as a table, and as CSV.
+
+security:
+  - sessionAuth: []
+
+paths:
+  # ------------------------------------------------------------------ responses
+
+  /api/questionnaires/responses/:
+    post:
+      tags: [Responses]
+      operationId: createResponse
+      summary: Open a response
+      description: >-
+        Starts a response against a questionnaire's latest published version, or
+        the version named. The reply carries the validation plan, so one call is
+        enough to render the first page.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                questionnaire:
+                  type: string
+                  description: The questionnaire's key.
+                  examples: [client-onboarding]
+                version:
+                  type: integer
+                  description: Leave out for the latest published version.
+                externalId:
+                  type: string
+                  description: >-
+                    How a respondent who is not a user of this system is
+                    identified. Read through `ResponseCreateView.get_external_id`,
+                    which a project may override to take it from the session
+                    instead of the body.
+                context:
+                  type: object
+                  additionalProperties: true
+                  description: >-
+                    Data conditions may read alongside the answers, such as the
+                    respondent's role. An answer with the same key wins.
+              required: [questionnaire]
+      responses:
+        "201":
+          description: Opened.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResponseWithPlan"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/questionnaires/responses/{responseId}/:
+    parameters:
+      - $ref: "#/components/parameters/ResponseId"
+    get:
+      tags: [Responses]
+      operationId: readResponse
+      summary: Where the respondent is, and what to render
+      parameters:
+        - name: plan
+          in: query
+          description: "`0` or `false` leaves the plan out."
+          schema:
+            type: string
+            default: "1"
+      responses:
+        "200":
+          description: The response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResponseWithPlan"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/questionnaires/responses/{responseId}/pages/{pageKey}/:
+    parameters:
+      - $ref: "#/components/parameters/ResponseId"
+      - $ref: "#/components/parameters/PageKey"
+    post:
+      tags: [Responses]
+      operationId: submitPage
+      summary: Push one page's answers
+      description: >-
+        The page is validated whole: if anything fails, nothing is written and
+        the issues come back keyed by question. Keys the page is not asking
+        about are ignored, and a question whose condition stopped holding has
+        its answer removed rather than left behind.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                answers:
+                  type: object
+                  additionalProperties: true
+                  description: Keyed by question key.
+              required: [answers]
+      responses:
+        "200":
+          description: Recorded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PageSubmitResult"
+        "409":
+          description: >-
+            The page does not apply for these answers, or the version is closed
+            to responses or edits.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Detail"
+        "422":
+          description: The page did not validate.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrorPayload"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/questionnaires/responses/{responseId}/pages/{pageKey}/skip/:
+    parameters:
+      - $ref: "#/components/parameters/ResponseId"
+      - $ref: "#/components/parameters/PageKey"
+    post:
+      tags: [Responses]
+      operationId: skipPage
+      summary: Leave a page for later
+      description: >-
+        Only a page whose `isSkippable` is true. Skipping means later, not
+        never: the page stays in `progress.pending`.
+      responses:
+        "200":
+          description: Skipped.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PageSubmitResult"
+        "409":
+          description: The page is not skippable, or does not apply.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Detail"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/questionnaires/value-sets/{key}/options/:
+    parameters:
+      - name: key
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags: [Value sets]
+      operationId: readValueSetOptions
+      summary: What a select should offer
+      description: >-
+        Static and model-backed sets are resolved here. An endpoint-backed one
+        cannot be, so what comes back is the endpoint to call and the paths to
+        read the options out of its reply.
+      responses:
+        "200":
+          description: Either the options or the endpoint that has them.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/ResolvedValueSet"
+                  - $ref: "#/components/schemas/EndpointValueSet"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ------------------------------------------------------------------ authoring
+
+  /api/authoring/catalog/:
+    get:
+      tags: [Authoring]
+      operationId: readCatalog
+      summary: What an author can pick
+      description: >-
+        The question types, the widgets and their props schemas, the value sets,
+        and every registered validator with its params schema and error keys --
+        including the ones other Django apps registered. Read once when an
+        editor opens.
+      responses:
+        "200":
+          description: The catalog.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EditorCatalog"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/authoring/questionnaires/:
+    get:
+      tags: [Authoring]
+      operationId: listQuestionnaires
+      summary: What there is to edit
+      responses:
+        "200":
+          description: Every questionnaire, with its versions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  questionnaires:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AuthoredQuestionnaire"
+                required: [questionnaires]
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/authoring/questionnaires/new/:
+    post:
+      tags: [Authoring]
+      operationId: createQuestionnaire
+      summary: A new questionnaire and its first draft
+      description: >-
+        The two come together: a questionnaire with no version is not something
+        anyone can do anything with.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                key:
+                  type: string
+                  description: Unique. Slug characters only.
+                  examples: [client-onboarding]
+                name:
+                  type: string
+                title:
+                  type: string
+                  description: The first version's title. Defaults to the name.
+                description:
+                  type: string
+              required: [key]
+      responses:
+        "201":
+          description: Created, as an editable document.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentEnvelope"
+        "400":
+          description: No key, or one that is taken.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Detail"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/authoring/questionnaires/{questionnaireKey}/:
+    parameters:
+      - $ref: "#/components/parameters/QuestionnaireKey"
+    delete:
+      tags: [Authoring]
+      operationId: deleteQuestionnaire
+      summary: Drop a questionnaire and all its versions
+      description: Refused while any of its versions has responses.
+      responses:
+        "204":
+          description: Deleted.
+        "400":
+          description: It has been answered.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Detail"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/authoring/questionnaires/{questionnaireKey}/versions/{version}/:
+    parameters:
+      - $ref: "#/components/parameters/QuestionnaireKey"
+      - $ref: "#/components/parameters/Version"
+    get:
+      tags: [Authoring]
+      operationId: readDefinition
+      summary: A version as an editable document
+      responses:
+        "200":
+          description: The document.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentEnvelope"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [Authoring]
+      operationId: applyDefinition
+      summary: Apply a document, all of it or none
+      description: |
+        Keys are identity. A page, section, question or choice is matched to
+        what is stored by its key, so changing a key is a delete and a create
+        rather than a rename -- answers are keyed by question key.
+
+        Every node is checked and nothing is written unless all of it went, so
+        one bad question does not hide the other nine. A refusal comes back as
+        `422` with one entry per node, addressed by the same path the editor
+        addresses its own state by (`pages.0.sections.1.questions.2`).
+
+        Once a version has responses, editing what a question asks changes what
+        those answers mean, and the save is refused unless `acknowledgement`
+        says someone understood that. What goes through is recorded as an
+        `AcknowledgedEdit`, field by field.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                document:
+                  $ref: "#/components/schemas/QuestionnaireDefinition"
+                acknowledgement:
+                  oneOf:
+                    - $ref: "#/components/schemas/EditAcknowledgement"
+                    - type: "null"
+              required: [document]
+      responses:
+        "200":
+          description: Applied. The document comes back as the server now holds it.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "422":
+          description: Refused. Nothing was written.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionIssues"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Authoring]
+      operationId: deleteVersion
+      summary: Drop a draft
+      description: Refused once the version has been answered.
+      responses:
+        "204":
+          description: Deleted.
+        "400":
+          description: It has been answered.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Detail"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/authoring/questionnaires/{questionnaireKey}/versions/{version}/fork/:
+    parameters:
+      - $ref: "#/components/parameters/QuestionnaireKey"
+      - $ref: "#/components/parameters/Version"
+    post:
+      tags: [Authoring]
+      operationId: forkVersion
+      summary: Copy a version into a new draft
+      description: >-
+        The ordinary answer to "this version already has responses". Everything
+        that makes up the definition comes along; what a question points *at* --
+        a widget, a value set, a nested questionnaire -- is shared. Responses
+        stay with the version they were given to.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  description: The draft's title. Defaults to the original's.
+      responses:
+        "201":
+          description: The new draft.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentEnvelope"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ------------------------------------------------------------------ reporting
+
+  /api/authoring/responses/:
+    get:
+      tags: [Reporting]
+      operationId: listResponses
+      summary: Responses as a table, a page at a time
+      description: >-
+        The columns come back with the rows, because what a questionnaire asks
+        is not something a client can know in advance. Filtering by
+        `questionnaire` is what makes answer columns available at all: a table
+        across every questionnaire has only the metadata ones, since different
+        questionnaires ask different things.
+      parameters:
+        - $ref: "#/components/parameters/FilterQuestionnaire"
+        - $ref: "#/components/parameters/FilterVersion"
+        - $ref: "#/components/parameters/FilterStatus"
+        - $ref: "#/components/parameters/FilterSearch"
+        - $ref: "#/components/parameters/FilterColumns"
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 25
+      responses:
+        "200":
+          description: One page of rows, with every column there was to pick.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResponseTablePage"
+        "400":
+          description: A `page` or `pageSize` that is not a number.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Detail"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/authoring/responses/export/:
+    get:
+      tags: [Reporting]
+      operationId: exportResponses
+      summary: The same table, as CSV
+      description: >-
+        Streamed, and filtered and columned exactly like the listing, so what is
+        downloaded is what was on screen. An answer with no flat form -- a
+        matrix, a list of files -- goes in as the JSON it already is.
+      parameters:
+        - $ref: "#/components/parameters/FilterQuestionnaire"
+        - $ref: "#/components/parameters/FilterVersion"
+        - $ref: "#/components/parameters/FilterStatus"
+        - $ref: "#/components/parameters/FilterSearch"
+        - $ref: "#/components/parameters/FilterColumns"
+      responses:
+        "200":
+          description: The CSV.
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+              example: 'attachment; filename="client-onboarding-responses.csv"'
+          content:
+            text/csv:
+              schema:
+                type: string
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+components:
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+      description: >-
+        Django's own session. Every unsafe method also needs the `X-CSRFToken`
+        header matching the `csrftoken` cookie. A project that authenticates
+        differently overrides `check_access` and this scheme stops describing it.
+
+  parameters:
+    ResponseId:
+      name: responseId
+      in: path
+      required: true
+      description: The response's UUID.
+      schema:
+        type: string
+        format: uuid
+    PageKey:
+      name: pageKey
+      in: path
+      required: true
+      schema:
+        type: string
+      example: about
+    QuestionnaireKey:
+      name: questionnaireKey
+      in: path
+      required: true
+      schema:
+        type: string
+      example: client-onboarding
+    Version:
+      name: version
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    FilterQuestionnaire:
+      name: questionnaire
+      in: query
+      description: A questionnaire's key. Also what decides the answer columns.
+      schema:
+        type: string
+    FilterVersion:
+      name: version
+      in: query
+      schema:
+        type: integer
+    FilterStatus:
+      name: status
+      in: query
+      schema:
+        $ref: "#/components/schemas/ResponseStatus"
+    FilterSearch:
+      name: search
+      in: query
+      description: Matched against the external id and the respondent's username.
+      schema:
+        type: string
+    FilterColumns:
+      name: columns
+      in: query
+      description: Comma-separated column keys, in the order wanted. Empty means all.
+      schema:
+        type: string
+      example: id,status,email
+
+  responses:
+    BadRequest:
+      description: The request could not be read.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Detail"
+    Forbidden:
+      description: >-
+        `check_access` refused. By default: not signed in, or not staff for the
+        authoring endpoints.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Detail"
+    NotFound:
+      description: No such record, or none this respondent may see.
+
+  schemas:
+    Detail:
+      type: object
+      properties:
+        detail:
+          type: string
+      required: [detail]
+
+    ResponseStatus:
+      type: string
+      enum: [in_progress, completed, abandoned]
+
+    PageResponseStatus:
+      type: string
+      enum: [completed, skipped]
+
+    SkipReason:
+      type: string
+      enum: [manual_action, false_condition]
+      description: >-
+        `manual_action` is the respondent putting it off; `false_condition` is
+        the answers ruling it out.
+
+    EditPolicy:
+      type: string
+      description: >-
+        Whether a respondent may come back and change what they answered. The
+        values are the project's `EditPolicy` choices.
+
+    Progress:
+      type: object
+      description: Where a response stands, derived from what is recorded.
+      properties:
+        completed:
+          type: array
+          items:
+            type: string
+        skipped:
+          type: array
+          items:
+            type: object
+            properties:
+              page:
+                type: string
+              reason:
+                $ref: "#/components/schemas/SkipReason"
+        pending:
+          type: array
+          items:
+            type: string
+          description: >-
+            Includes pages skipped by the respondent: skipping means later.
+        current:
+          oneOf:
+            - type: string
+            - type: "null"
+          description: The page to show -- the first one still pending.
+        isComplete:
+          type: boolean
+      required: [completed, skipped, pending, current, isComplete]
+
+    ResponsePolicy:
+      type: object
+      description: >-
+        What the version still accepts, so a client can go read-only rather than
+        let someone type into a page that will be refused.
+      properties:
+        editPolicy:
+          $ref: "#/components/schemas/EditPolicy"
+        canRespond:
+          type: boolean
+        canEdit:
+          type: boolean
+        responsesDueAt:
+          oneOf: [{ type: string, format: date-time }, { type: "null" }]
+        editsDueAt:
+          oneOf: [{ type: string, format: date-time }, { type: "null" }]
+      required: [editPolicy, canRespond, canEdit, responsesDueAt, editsDueAt]
+
+    ResponsePayload:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        questionnaire:
+          type: string
+        version:
+          type: integer
+        status:
+          $ref: "#/components/schemas/ResponseStatus"
+        answers:
+          type: object
+          additionalProperties: true
+          description: >-
+            Every answer that currently counts, keyed by question key. Answers
+            on a page that no longer applies are kept out.
+        progress:
+          $ref: "#/components/schemas/Progress"
+        policy:
+          $ref: "#/components/schemas/ResponsePolicy"
+      required: [id, questionnaire, version, status, answers, progress, policy]
+
+    ResponseWithPlan:
+      allOf:
+        - $ref: "#/components/schemas/ResponsePayload"
+        - type: object
+          properties:
+            plan:
+              $ref: "#/components/schemas/QuestionnairePlan"
+
+    PageResponsePayload:
+      type: object
+      properties:
+        page:
+          type: string
+        status:
+          $ref: "#/components/schemas/PageResponseStatus"
+        skipReason:
+          oneOf:
+            - $ref: "#/components/schemas/SkipReason"
+            - type: "null"
+        submittedAt:
+          oneOf: [{ type: string, format: date-time }, { type: "null" }]
+      required: [page, status, skipReason, submittedAt]
+
+    PageSubmitResult:
+      type: object
+      properties:
+        page:
+          $ref: "#/components/schemas/PageResponsePayload"
+        response:
+          $ref: "#/components/schemas/ResponsePayload"
+      required: [page, response]
+
+    ValidationErrorPayload:
+      type: object
+      description: What a page that did not validate comes back as.
+      properties:
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: object
+              properties:
+                validator:
+                  type: string
+                errorKey:
+                  type: string
+                message:
+                  type: string
+                  description: Already resolved, with overrides applied.
+                params:
+                  type: object
+                  additionalProperties: true
+              required: [validator, errorKey, message]
+          description: Keyed by question key.
+      required: [errors]
+
+    QuestionnairePlan:
+      type: object
+      description: >-
+        What the browser rebuilds as a Zod schema, plus what it needs to render:
+        base types, checks in order, resolved messages, the column counts each
+        layer resolved to, and the widget and props the server picked. Emitted
+        by `vinta_django_questionnaires.plan`; `planVersion` says which shape it
+        is. Kept loose here because a client should read it through the
+        TypeScript types the package ships rather than against this document.
+      properties:
+        planVersion:
+          type: integer
+        questionnaire:
+          type: string
+        version:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        windowSizeRanges:
+          type: array
+          items:
+            $ref: "#/components/schemas/WindowSizeRange"
+        columns:
+          $ref: "#/components/schemas/ColumnCounts"
+        pages:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+      required: [planVersion, questionnaire, version, pages]
+      additionalProperties: true
+
+    ResolvedValueSet:
+      type: object
+      properties:
+        key:
+          type: string
+        source:
+          type: string
+        options:
+          type: array
+          items:
+            type: object
+            properties:
+              value:
+                type: string
+              label:
+                type: string
+            required: [value, label]
+      required: [key, source, options]
+
+    EndpointValueSet:
+      type: object
+      properties:
+        key:
+          type: string
+        source:
+          type: string
+        endpoint:
+          type: object
+          description: The call to make, and the paths to read the options out of its reply.
+          additionalProperties: true
+      required: [key, source, endpoint]
+
+    # ---------------------------------------------------------- the document
+
+    ColumnCounts:
+      type: object
+      additionalProperties:
+        type: integer
+        minimum: 1
+      description: >-
+        Keyed by window size range key. In a *document* these are the counts the
+        layer declares itself; a range left out inherits from its parent.
+
+    WindowSizeRange:
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        minWidth:
+          type: integer
+        maxWidth:
+          oneOf: [{ type: integer }, { type: "null" }]
+      required: [key, minWidth, maxWidth]
+
+    ChoiceDefinition:
+      type: object
+      properties:
+        axis:
+          type: string
+          enum: [option, row, column]
+        value:
+          type: string
+          description: What is stored in the answer, and the choice's identity.
+        label:
+          type: string
+        extra:
+          type: object
+          additionalProperties: true
+        isActive:
+          type: boolean
+      required: [axis, value, label]
+
+    ValidatorDefinition:
+      type: object
+      description: >-
+        One link of a question's validation chain. Matched by position on save,
+        because a chain has no key of its own.
+      properties:
+        validator:
+          type: string
+          description: The key it is registered under, on both sides of the wire.
+        params:
+          type: object
+          additionalProperties: true
+          description: Checked against the validator's own params schema.
+        messageOverrides:
+          type: object
+          additionalProperties:
+            type: string
+          description: Maps one of the validator's error keys to the message to show instead.
+        isEnabled:
+          type: boolean
+      required: [validator]
+
+    QuestionDefinition:
+      type: object
+      properties:
+        key:
+          type: string
+          description: Unique within the version. Answers are stored against it.
+        title:
+          type: string
+        description:
+          type: string
+          description: Markdown.
+        questionType:
+          type: string
+        itemQuestionType:
+          type: string
+          description: The type of each entry, for a list of items.
+        condition:
+          type: string
+          description: JMESPath over the answers. Empty always applies.
+        requiresBeingFirstInARow:
+          type: boolean
+        requiresBeingLastInARow:
+          type: boolean
+        minimumColumns:
+          $ref: "#/components/schemas/ColumnCounts"
+        widget:
+          oneOf: [{ type: string }, { type: "null" }]
+          description: "`null` uses the question type's default."
+        widgetProps:
+          type: object
+          additionalProperties: true
+          description: Checked against the widget's props schema on save.
+        allowsOther:
+          type: boolean
+        otherLabel:
+          type: string
+        valueSet:
+          oneOf: [{ type: string }, { type: "null" }]
+        subQuestionnaire:
+          oneOf: [{ type: string }, { type: "null" }]
+        subQuestionnaireVersion:
+          oneOf: [{ type: integer }, { type: "null" }]
+          description: "`null` follows the latest published version."
+        choices:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChoiceDefinition"
+        validators:
+          type: array
+          items:
+            $ref: "#/components/schemas/ValidatorDefinition"
+        resolved:
+          type: object
+          readOnly: true
+          description: Written by the server, ignored on the way back.
+          properties:
+            widget:
+              oneOf: [{ type: string }, { type: "null" }]
+            fingerprint:
+              type: string
+              description: >-
+                A digest of what this question asks. Two questions with the same
+                fingerprint, in different versions, can have their answers
+                pooled.
+      required: [key, title, questionType]
+
+    SectionDefinition:
+      type: object
+      properties:
+        key:
+          type: string
+          description: Unique within the page.
+        title:
+          type: string
+        description:
+          type: string
+        conclusion:
+          type: string
+        defaultState:
+          type: string
+          enum: [open, closed]
+        condition:
+          type: string
+        columns:
+          $ref: "#/components/schemas/ColumnCounts"
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuestionDefinition"
+      required: [key, title]
+
+    PageDefinition:
+      type: object
+      properties:
+        key:
+          type: string
+          description: Unique within the version.
+        title:
+          type: string
+        description:
+          type: string
+        conclusion:
+          type: string
+        condition:
+          type: string
+        isSkippable:
+          type: boolean
+        columns:
+          $ref: "#/components/schemas/ColumnCounts"
+        sections:
+          type: array
+          items:
+            $ref: "#/components/schemas/SectionDefinition"
+      required: [key, title]
+
+    QuestionnaireDefinition:
+      type: object
+      description: >-
+        A version as its author configured it. The order of `pages`, `sections`,
+        `questions`, `choices` and `validators` in the arrays is the order they
+        are saved in.
+      properties:
+        documentVersion:
+          type: integer
+          description: Refused if it is not the one this server speaks.
+        questionnaire:
+          type: object
+          properties:
+            key:
+              type: string
+            name:
+              type: string
+          required: [key]
+        version:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          description: The project's `VersionStatus` choices -- `draft`, `published`, ...
+        editPolicy:
+          $ref: "#/components/schemas/EditPolicy"
+        responsesDueAt:
+          oneOf: [{ type: string, format: date-time }, { type: "null" }]
+        editsDueAt:
+          oneOf: [{ type: string, format: date-time }, { type: "null" }]
+        windowSizeRanges:
+          type: array
+          items:
+            $ref: "#/components/schemas/WindowSizeRange"
+        columns:
+          $ref: "#/components/schemas/ColumnCounts"
+        pages:
+          type: array
+          items:
+            $ref: "#/components/schemas/PageDefinition"
+        state:
+          type: object
+          readOnly: true
+          description: Written by the server, ignored on the way back.
+          properties:
+            responseCount:
+              type: integer
+            requiresAcknowledgement:
+              type: boolean
+              description: Whether a save needs the box ticked.
+            isPublished:
+              type: boolean
+            fingerprint:
+              type: string
+      required: [documentVersion, questionnaire, version, pages]
+
+    DocumentEnvelope:
+      type: object
+      properties:
+        document:
+          $ref: "#/components/schemas/QuestionnaireDefinition"
+      required: [document]
+
+    EditAcknowledgement:
+      type: object
+      description: >-
+        Someone saying they know what editing a live version does to the
+        responses already given. Without `understood: true` the save is refused.
+      properties:
+        understood:
+          type: boolean
+        reason:
+          type: string
+          description: Kept with the record of the edit.
+      required: [understood]
+
+    DefinitionIssue:
+      type: object
+      properties:
+        path:
+          type: string
+          description: >-
+            The node, addressed the way an editor addresses its own state.
+            Empty for the version itself.
+          examples: ["", "pages.0", "pages.0.sections.1.questions.2.validators.0"]
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          description: Keyed by field name, or `__all__` for a non-field error.
+      required: [path, errors]
+
+    DefinitionIssues:
+      type: object
+      properties:
+        issues:
+          type: array
+          items:
+            $ref: "#/components/schemas/DefinitionIssue"
+      required: [issues]
+
+    # ----------------------------------------------------------- the catalog
+
+    Labelled:
+      type: object
+      properties:
+        value:
+          type: string
+        label:
+          type: string
+      required: [value, label]
+
+    QuestionTypeInfo:
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        answerShape:
+          type: string
+          enum: [scalar, list, range, matrix, file, file_list, object, object_list]
+        supportsChoices:
+          type: boolean
+        supportsValueSet:
+          type: boolean
+        supportsOtherOption:
+          type: boolean
+        usesMatrixAxes:
+          type: boolean
+        requiresItemType:
+          type: boolean
+        requiresSubQuestionnaire:
+          type: boolean
+      required: [key, label, answerShape]
+
+    ValidatorInfo:
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        description:
+          type: string
+        paramsSchema:
+          type: object
+          additionalProperties: true
+          description: JSON Schema for what this validator's `params` may hold.
+        errorKeys:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+              message:
+                type: string
+            required: [key, message]
+        questionTypes:
+          oneOf:
+            - type: array
+              items:
+                type: string
+            - type: "null"
+          description: "`null` means every question type."
+        clientMode:
+          type: string
+          enum: [checks, custom, server_only]
+          description: >-
+            `checks` maps onto native Zod checks; `custom` needs an
+            implementation registered in the browser under the same key;
+            `server_only` cannot run there at all.
+        skipWhenEmpty:
+          type: boolean
+        readsContext:
+          type: boolean
+      required: [key, label, paramsSchema, errorKeys, clientMode]
+
+    WidgetInfo:
+      type: object
+      properties:
+        key:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        component:
+          type: string
+          description: The client-side component, when it differs from the key.
+        propsSchema:
+          type: object
+          additionalProperties: true
+        defaultProps:
+          type: object
+          additionalProperties: true
+        questionTypes:
+          type: array
+          items:
+            type: string
+        defaultForQuestionTypes:
+          type: array
+          items:
+            type: string
+      required: [key, name, propsSchema, questionTypes]
+
+    ValueSetInfo:
+      type: object
+      properties:
+        key:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        source:
+          type: string
+        resolvedByTheClient:
+          type: boolean
+      required: [key, name, source]
+
+    QuestionnaireInfo:
+      type: object
+      properties:
+        key:
+          type: string
+        name:
+          type: string
+        versions:
+          type: array
+          items:
+            type: object
+            properties:
+              version:
+                type: integer
+              title:
+                type: string
+              status:
+                type: string
+            required: [version]
+      required: [key, name, versions]
+
+    EditorCatalog:
+      type: object
+      properties:
+        catalogVersion:
+          type: integer
+        defaultColumnCount:
+          type: integer
+        questionTypes:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuestionTypeInfo"
+        scalarQuestionTypes:
+          type: array
+          items:
+            type: string
+          description: The types a list of items may repeat.
+        validators:
+          type: array
+          items:
+            $ref: "#/components/schemas/ValidatorInfo"
+        widgets:
+          type: array
+          items:
+            $ref: "#/components/schemas/WidgetInfo"
+        valueSets:
+          type: array
+          items:
+            $ref: "#/components/schemas/ValueSetInfo"
+        questionnaires:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuestionnaireInfo"
+        choiceAxes:
+          type: array
+          items:
+            $ref: "#/components/schemas/Labelled"
+        sectionStates:
+          type: array
+          items:
+            $ref: "#/components/schemas/Labelled"
+        versionStatuses:
+          type: array
+          items:
+            $ref: "#/components/schemas/Labelled"
+        editPolicies:
+          type: array
+          items:
+            $ref: "#/components/schemas/Labelled"
+      required: [catalogVersion, questionTypes, validators, widgets]
+
+    AuthoredQuestionnaire:
+      type: object
+      properties:
+        key:
+          type: string
+        name:
+          type: string
+        isActive:
+          type: boolean
+        versions:
+          type: array
+          items:
+            type: object
+            properties:
+              version:
+                type: integer
+              title:
+                type: string
+              status:
+                type: string
+              responseCount:
+                type: integer
+            required: [version, status, responseCount]
+      required: [key, name, versions]
+
+    # --------------------------------------------------------- the responses
+
+    ResponseColumn:
+      type: object
+      properties:
+        key:
+          type: string
+          description: A question's key, or one of the metadata names.
+        label:
+          type: string
+        group:
+          type: string
+          enum: [meta, answer]
+        page:
+          type: string
+          description: For grouping a column picker. Empty for metadata.
+        section:
+          type: string
+        questionType:
+          type: string
+      required: [key, label, group]
+
+    ResponseTablePage:
+      type: object
+      properties:
+        columns:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResponseColumn"
+          description: Everything there was to pick, not just what the rows hold.
+        selectedColumns:
+          type: array
+          items:
+            type: string
+          description: What this reply's rows actually hold, in order.
+        defaultColumns:
+          type: array
+          items:
+            type: string
+          description: A sensible first view, for a client with nothing stored.
+        results:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+            description: >-
+              Keyed by column key. An answer keeps whatever shape it was given
+              in -- a string, a number, a list, an object.
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+      required:
+        [columns, selectedColumns, defaultColumns, results, page, pageSize, total, totalPages]

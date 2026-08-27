@@ -1,0 +1,28 @@
+{% extends "admin/change_form.html" %}
+{% load i18n %}
+
+{% comment %}
+  This form is the version's own settings. What is *in* the version is one
+  click away, and saying so here is the difference between someone finding the
+  structure editor and someone editing pages one at a time forever.
+{% endcomment %}
+
+{% block content %}
+  {% if original %}
+    <div class="vqa-jump">
+      <a class="vqa-link" href="{% url 'admin:vinta_django_questionnaires_questionnaireversion_structure' original.pk %}">
+        {% translate "Edit the structure" %}
+      </a>
+      <a class="vqa-link" href="{% url 'admin:vinta_django_questionnaires_questionnaireresponse_table' %}?questionnaire={{ original.questionnaire.key }}&amp;version={{ original.version }}">
+        {% translate "Responses" %}
+      </a>
+      <span class="help">{% translate "Pages, sections, questions, choices and validators are all on the structure editor." %}</span>
+    </div>
+  {% endif %}
+  {{ block.super }}
+{% endblock %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% load static %}{% static 'vinta_django_questionnaires/admin.css' %}">
+{% endblock %}

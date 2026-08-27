@@ -1,0 +1,18 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+  <p>
+    {% blocktranslate %}
+      Editing a whole questionnaire at once means posting a whole questionnaire at once, and
+      Django refuses a form with more than DATA_UPLOAD_MAX_NUMBER_FIELDS inputs in it. This one
+      has about {{ needed }}, and the limit is currently {{ current }}.
+    {% endblocktranslate %}
+  </p>
+  <p>{% translate "Nothing is wrong with the questionnaire. Raise the limit in your settings:" %}</p>
+  <pre>DATA_UPLOAD_MAX_NUMBER_FIELDS = {{ suggested }}</pre>
+  <p>
+    {% translate "Then go back and save again -- nothing was written." %}
+    <a href="{{ settings_url }}">{% translate "Version settings" %}</a>
+  </p>
+{% endblock %}

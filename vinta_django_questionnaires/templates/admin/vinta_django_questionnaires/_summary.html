@@ -1,0 +1,29 @@
+{% load i18n %}
+{% comment %}
+  The row of a page, section or question: what someone scans by, plus the
+  controls that act on the whole node. Rendered inside a <summary>, so clicking
+  the empty space opens it -- hence the wrapper that stops clicks on the inputs
+  from toggling the disclosure.
+{% endcomment %}
+<span class="vqa-row__grip" data-vqa-handle title="{% translate 'Drag to reorder' %}" aria-hidden="true">⠿</span>
+<span class="vqa-row__caret" aria-hidden="true">&rsaquo;</span>
+
+<span class="vqa-row__fields" data-vqa-stop>
+  {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+  {% for field in form.summary %}
+    <span class="vqa-field vqa-field--{{ field.name }}{% if field.errors %} vqa-field--invalid{% endif %}">
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {{ field.errors }}
+    </span>
+  {% endfor %}
+  {% if count %}<span class="vqa-badge vqa-row__count">{{ count }}</span>{% endif %}
+</span>
+
+<span class="vqa-row__controls" data-vqa-stop>
+  {% if form.DELETE %}
+    <label class="vqa-delete" title="{% blocktranslate %}Delete this {{ label }} on save{% endblocktranslate %}">
+      {{ form.DELETE }} <span>{% translate "Delete" %}</span>
+    </label>
+  {% endif %}
+</span>

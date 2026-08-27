@@ -1,0 +1,18 @@
+{% extends "admin/change_form.html" %}
+{% load i18n %}
+
+{% comment %}
+  Adds the one thing a questionnaire's own page is for that the model does not
+  do: starting the next version. It copies the latest one, which is what almost
+  everybody wants and what nobody wants to do by hand.
+{% endcomment %}
+
+{% block submit_buttons_bottom %}
+  {{ block.super }}
+  {% if show_new_version %}
+    <div class="submit-row">
+      <button type="submit" name="_new_version">{% translate "Start a new version from the latest" %}</button>
+      <p class="help">{% translate "A deep copy, as a draft. Responses stay with the version they were given to." %}</p>
+    </div>
+  {% endif %}
+{% endblock %}

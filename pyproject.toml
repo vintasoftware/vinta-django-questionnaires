@@ -1,0 +1,195 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "vinta-django-questionnaires"
+version = "0.1.0"
+description = "A reusable Django application for building data-driven questionnaires."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Hugo Bessa", email = "hugo@vinta.com.br" }]
+maintainers = [{ name = "Hugo Bessa", email = "hugo@vinta.com.br" }]
+keywords = [
+    "django",
+    "vinta",
+    "questionnaires",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Web Environment",
+    "Framework :: Django",
+    "Framework :: Django :: 5.2",
+    "Framework :: Django :: 6.0",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+dependencies = [
+    "django>=5.2",
+    "jmespath>=1.1.0",
+    "jsonschema>=4.26.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/vintasoftware/vinta-django-questionnaires"
+Documentation = "https://github.com/vintasoftware/vinta-django-questionnaires#readme"
+Repository = "https://github.com/vintasoftware/vinta-django-questionnaires"
+Issues = "https://github.com/vintasoftware/vinta-django-questionnaires/issues"
+Changelog = "https://github.com/vintasoftware/vinta-django-questionnaires/blob/main/CHANGELOG.md"
+
+[dependency-groups]
+dev = [
+    "django-stubs[compatible-mypy]>=5.2",
+    "mypy>=1.15",
+    "openapi-spec-validator>=0.7",
+    "pre-commit>=4.1",
+    "pytest>=8.3",
+    "pytest-cov>=6.0",
+    "pytest-django>=4.10",
+    "pyyaml>=6.0",
+    "ruff>=0.9",
+    "tox>=4.24",
+    "tox-uv>=1.25",
+    "types-jmespath>=1.1.0.20260724",
+    "types-jsonschema>=4.26.0.20260518",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["vinta_django_questionnaires"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/vinta_django_questionnaires",
+    "/tests",
+    "/example",
+    "/README.md",
+    "/CHANGELOG.md",
+    "/LICENSE",
+    "/tox.ini",
+]
+
+# ---------------------------------------------------------------- ruff
+[tool.ruff]
+line-length = 99
+target-version = "py310"
+src = ["vinta_django_questionnaires", "tests", "example"]
+extend-exclude = ["*/migrations/*"]
+
+[tool.ruff.lint]
+select = [
+    "A",    # flake8-builtins
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "DJ",   # flake8-django
+    "DTZ",  # flake8-datetimez
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "FA",   # flake8-future-annotations
+    "I",    # isort
+    "N",    # pep8-naming
+    "PIE",  # flake8-pie
+    "PT",   # flake8-pytest-style
+    "PTH",  # flake8-use-pathlib
+    "RET",  # flake8-return
+    "RUF",  # ruff-specific
+    "SIM",  # flake8-simplify
+    "T20",  # flake8-print
+    "TC",   # flake8-type-checking
+    "TID",  # flake8-tidy-imports
+    "UP",   # pyupgrade
+    "W",    # pycodestyle warnings
+]
+ignore = [
+    "RUF012", # mutable class attrs need ClassVar - noisy with Django Meta
+    "N818",   # exceptions read as conditions here, the way Django's own do
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["DJ008"]
+"vinta_django_questionnaires/migrations/*" = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["vinta_django_questionnaires"]
+combine-as-imports = true
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "parents"
+
+[tool.ruff.format]
+docstring-code-format = true
+
+# ---------------------------------------------------------------- mypy
+[tool.mypy]
+# No python_version pin: django-stubs' own stubs use 3.11+ constructs, and pinning an
+# older version silently degrades TextChoices to a plain tuple.
+files = ["vinta_django_questionnaires", "tests", "example"]
+strict = true
+plugins = ["mypy_django_plugin.main"]
+warn_unreachable = true
+show_error_codes = true
+exclude = ['/migrations/']
+
+[[tool.mypy.overrides]]
+# ModelAdmin and TabularInline are not subscriptable at runtime, and the checker-only
+# alias dance those would need buys nothing here: every method is annotated already.
+# The mixins deliberately narrow `form` and `get_form`, which reads as a conflict
+# between two base classes even though it is the point of a mixin.
+module = ["vinta_django_questionnaires.admin.*", "example.admin"]
+disable_error_code = ["type-arg", "misc"]
+
+[[tool.mypy.overrides]]
+# The example project is a worked example, not library code: it is checked, but
+# its admin and commands are not held to the library's annotation standard.
+module = ["example.*"]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+disallow_untyped_defs = false
+disallow_untyped_calls = false
+disallow_incomplete_defs = false
+warn_unreachable = false
+warn_return_any = false
+
+[tool.django-stubs]
+django_settings_module = "tests.settings"
+
+# ---------------------------------------------------------------- pytest
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "tests.settings"
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "--strict-markers --strict-config -ra"
+filterwarnings = ["error"]
+
+# ---------------------------------------------------------------- coverage
+[tool.coverage.run]
+# source_pkgs, not a path: under tox the package is measured where the wheel installed it.
+source_pkgs = ["vinta_django_questionnaires"]
+branch = true
+omit = ["*/migrations/*"]
+
+[tool.coverage.paths]
+source = ["vinta_django_questionnaires", "*/site-packages/vinta_django_questionnaires"]
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@overload",
+]

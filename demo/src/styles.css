@@ -1,0 +1,70 @@
+/**
+ * Demo-level accessibility overrides.
+ *
+ * The design system's `--muted-foreground` is slate-500, which measures
+ * between 4.36:1 and 4.56:1 depending on the surface under it -- either side
+ * of the WCAG AA line for body text, and visibly weak on white. Secondary copy
+ * carries real content here (page and question descriptions, progress, the
+ * answers dump), so this takes it one step darker, to slate-600 at ~7:1.
+ *
+ * Scoped to the light theme: in dark mode the same token is slate-400 against
+ * a dark surface, which is not the problem being fixed here.
+ *
+ * Worth raising against the design system rather than living here forever.
+ */
+:root:not(.dark) {
+  --muted-foreground: var(--slate-600);
+}
+
+/* The responses table. The design system has no table component, so this is
+   the smallest thing that reads as one -- and it scrolls in its own box, so a
+   questionnaire with thirty questions does not scroll the page sideways. */
+.demo-table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.demo-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.875rem;
+}
+
+.demo-table th,
+.demo-table td {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  vertical-align: top;
+}
+
+.demo-table th {
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  background: var(--background);
+}
+
+.demo-table tbody tr:hover {
+  background: var(--muted);
+}
+
+.demo-column-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 1rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+}
+
+.demo-select {
+  font: inherit;
+  font-size: 0.875rem;
+  color: var(--foreground);
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  padding: 0.375rem 0.5rem;
+}
