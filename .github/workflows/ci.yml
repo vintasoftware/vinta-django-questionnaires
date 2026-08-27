@@ -39,6 +39,19 @@ jobs:
       - name: Check for missing migrations
         run: uv run python -m tests.manage makemigrations --check --dry-run
 
+      # The two packages share a version and release on one tag. Left to a
+      # convention they would drift, and the drift would only show up at the
+      # tag, which is the worst moment to find it.
+      - name: Check the two packages agree on the version
+        run: |
+          python_version="$(uv version --short)"
+          client_version="$(python3 -c 'import json; print(json.load(open("client/package.json"))["version"])')"
+          if [ "$python_version" != "$client_version" ]; then
+            echo "::error::pyproject.toml says $python_version, client/package.json says $client_version"
+            exit 1
+          fi
+          echo "both at $python_version"
+
   test:
     name: Python ${{ matrix.python-version }} / Django ${{ matrix.django }}
     runs-on: ubuntu-latest

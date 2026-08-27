@@ -642,36 +642,29 @@ them in the same commit.
 
 ## Releasing
 
-Two packages come out of this repository and they version independently, so the
-tag says which one is going: `vX.Y.Z` is the Django app, `client-vX.Y.Z` is the
-npm package. Each workflow ignores the other's tags.
+Both packages share a version and go out together, on one `vX.Y.Z` tag. CI
+refuses a commit where `pyproject.toml` and `client/package.json` disagree, so
+the tag can only ever mean one thing.
 
-**The Django app**, to PyPI:
-
-1. Bump the version in `pyproject.toml` and move the `Unreleased` section of
-   `CHANGELOG.md` under the new number.
+1. Bump the version in **both** `pyproject.toml` and `client/package.json`, and
+   move the `Unreleased` section of `CHANGELOG.md` under the new number.
 2. Tag the commit as `vX.Y.Z` and publish a GitHub release.
-3. `publish.yml` builds, verifies that the tag matches the version, uploads
-   through trusted publishing, and attaches Sigstore signatures.
+3. `publish.yml` builds the Django app, checks the tag against the version, and
+   uploads to PyPI. `publish-client.yml` type checks, tests and builds the
+   client, checks the tag against the version and that the version is not
+   already on npm, and publishes it.
 
-To rehearse, run that workflow manually with the `testpypi` target.
+The Django app is republished even when nothing in it changed; that is the cost
+of a shared version, and it is cheaper than two numbers to keep track of.
 
-**The client**, to npm:
-
-1. Bump the version in `client/package.json`.
-2. Tag the commit as `client-vX.Y.Z` and publish a GitHub release.
-3. `publish-client.yml` type checks, tests, builds, checks that the tag matches
-   the version and that the version is not already on npm, then publishes
-   through trusted publishing.
-
-To rehearse, run that workflow manually and leave **Dry run** ticked: it does
-everything up to and including `npm pack`, uploads the tarball as an artifact,
-and stops.
+To rehearse: run `publish.yml` manually with the `testpypi` target, and
+`publish-client.yml` manually with **Dry run** ticked -- the latter does
+everything up to `npm pack` and keeps the tarball as an artifact.
 
 Neither workflow stores a token. Both mint a short-lived one from GitHub's OIDC,
 which is why each has its own deployment environment -- `pypi`, `testpypi` and
 `npm` -- named in the trusted publisher on the other side. npm's provenance
-attestation is generated automatically from the same exchange, and is why
+attestation is generated from the same exchange, and is why
 `client/package.json` carries a `repository` field pointing at this repository
 and the `client` directory inside it.
 

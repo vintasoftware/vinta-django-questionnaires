@@ -18,8 +18,8 @@ permissions:
 jobs:
   build:
     name: Build the distribution
-    # The npm package releases from this repository too, under `client-v*`
-    # tags; those are not this workflow's business.
+    # A dispatch runs from a branch, whose name is not a version; a release
+    # has to be a `vX.Y.Z` tag.
     if: github.event_name != 'release' || startsWith(github.ref_name, 'v')
     runs-on: ubuntu-latest
     steps:

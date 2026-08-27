@@ -5,23 +5,32 @@ All notable changes to this project are documented here. The format follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [Unreleased]
+## [0.1.1] - 2026-08-27
 
-### Added
+The two packages share a version from here on, and go out on one `vX.Y.Z` tag.
+CI refuses a commit where `pyproject.toml` and `client/package.json` disagree.
 
-- `publish-client.yml`, which releases the TypeScript client to npm through
-  trusted publishing on a `client-v*` tag -- type check, tests, build, a check
-  that the tag matches the version and that the version is not already there,
-  and a dry run mode that stops after `npm pack`. `publish.yml` now ignores
-  those tags, so the two packages release independently.
+Nothing in the Django app changed: it is republished only to keep the pair in
+step. Everything below is the npm package or the release plumbing.
+
+### Fixed
+
+- The published client's inline documentation pointed at
+  `@vintasoftware/django-questionnaires`, a package that does not exist -- 0.1.0
+  went to npm from a build made before the rename reached the doc comments.
+- The client package declared no `repository`, `homepage` or `bugs`, and left
+  the licence out of the tarball. `repository` is not cosmetic: npm's provenance
+  attestation names the source of a build, so without it the release workflow
+  cannot publish at all.
 - The release signing action was pinned to a version from before Sigstore
-  rotated its TUF root, which failed with `root was signed by 0/3 keys` --
-  after the upload, so 0.1.0 is on PyPI without Sigstore bundles attached to
-  its GitHub release. PyPI's own PEP 740 attestations are unaffected.
-- The client package declares its `repository`, `homepage` and `bugs`, and
-  ships the licence. npm's provenance attestation names the source of a build,
-  so in a repository holding two packages it needs to know which directory this
-  one lives in.
+  rotated its TUF root, and failed with `root was signed by 0/3 keys`. It runs
+  after the upload, so 0.1.0 reached PyPI with its PEP 740 attestations intact
+  but without Sigstore bundles on its GitHub release.
+
+### Changed
+
+- Both packages release from the same tag. `publish-client.yml` no longer waits
+  on a `client-v*` tag of its own, and `publish.yml` no longer has to ignore one.
 
 
 ## [0.1.0] - 2026-08-27
@@ -29,6 +38,9 @@ All notable changes to this project are documented here. The format follows
 ### Added
 
 - Initial project scaffolding.
+- `publish.yml` and `publish-client.yml`, which release the Django app to PyPI
+  and the TypeScript client to npm through trusted publishing -- no token is
+  stored on either side.
 - Questionnaire definition models: versioned questionnaires, pages, sections,
   questions, inline choices, value sets, widgets and the responsive column
   grid, with conditions evaluated through JMESPath.
@@ -182,5 +194,5 @@ All notable changes to this project are documented here. The format follows
   submission layer and reported to the client as a `policy` block on every
   response payload.
 
-[Unreleased]: https://github.com/vintasoftware/vinta-django-questionnaires/compare/v0.1.0...HEAD
+[0.1.1]: https://github.com/vintasoftware/vinta-django-questionnaires/releases/tag/v0.1.1
 [0.1.0]: https://github.com/vintasoftware/vinta-django-questionnaires/releases/tag/v0.1.0

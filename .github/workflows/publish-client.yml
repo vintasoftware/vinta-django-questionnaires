@@ -1,8 +1,8 @@
 name: Publish the client to npm
 
-# Two packages live in this repository and they version independently, so the
-# tag says which one is being released: `v1.2.3` is the Django app, and
-# `client-v1.2.3` is the npm package. Each workflow ignores the other's tags.
+# The two packages in this repository share a version and go out together, on
+# one `vX.Y.Z` tag. CI refuses a commit where the two versions disagree, so the
+# tag can only ever mean one thing.
 
 on:
   release:
@@ -26,7 +26,7 @@ env:
 jobs:
   build:
     name: Build and check the package
-    if: github.event_name != 'release' || startsWith(github.ref_name, 'client-v')
+    if: github.event_name != 'release' || startsWith(github.ref_name, 'v')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -47,7 +47,7 @@ jobs:
         working-directory: client
         run: |
           version="$(node -p 'require("./package.json").version')"
-          tag="${GITHUB_REF_NAME#client-v}"
+          tag="${GITHUB_REF_NAME#v}"
           if [ "$version" != "$tag" ]; then
             echo "::error::Tag $tag does not match the version $version in client/package.json"
             exit 1
