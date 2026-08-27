@@ -14,6 +14,10 @@ All notable changes to this project are documented here. The format follows
   that the tag matches the version and that the version is not already there,
   and a dry run mode that stops after `npm pack`. `publish.yml` now ignores
   those tags, so the two packages release independently.
+- The release signing action was pinned to a version from before Sigstore
+  rotated its TUF root, which failed with `root was signed by 0/3 keys` --
+  after the upload, so 0.1.0 is on PyPI without Sigstore bundles attached to
+  its GitHub release. PyPI's own PEP 740 attestations are unaffected.
 - The client package declares its `repository`, `homepage` and `bugs`, and
   ships the licence. npm's provenance attestation names the source of a build,
   so in a repository holding two packages it needs to know which directory this

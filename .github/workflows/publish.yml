@@ -108,8 +108,13 @@ jobs:
           name: dist
           path: dist/
 
+      # Not older than this: Sigstore rotated its TUF root, and a version that
+      # bundles the trust root from before it fails with
+      # `UnsignedMetadataError: root was signed by 0/3 keys` -- after the
+      # upload has already happened, so the package is out and the signatures
+      # are not.
       - name: Sign with Sigstore
-        uses: sigstore/gh-action-sigstore-python@v3.0.0
+        uses: sigstore/gh-action-sigstore-python@v3.5.0
         with:
           inputs: ./dist/*.tar.gz ./dist/*.whl
 
