@@ -3,6 +3,28 @@
   "version": "0.1.0",
   "description": "Zod schemas and a React editor for questionnaires defined with vinta-django-questionnaires.",
   "license": "MIT",
+  "keywords": [
+    "django",
+    "questionnaire",
+    "forms",
+    "validation",
+    "zod",
+    "react"
+  ],
+  "author": "Vinta Software",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vintasoftware/vinta-django-questionnaires.git",
+    "directory": "client"
+  },
+  "homepage": "https://github.com/vintasoftware/vinta-django-questionnaires/tree/main/client#readme",
+  "bugs": {
+    "url": "https://github.com/vintasoftware/vinta-django-questionnaires/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

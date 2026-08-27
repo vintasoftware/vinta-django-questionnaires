@@ -1,0 +1,143 @@
+name: Publish the client to npm
+
+# Two packages live in this repository and they version independently, so the
+# tag says which one is being released: `v1.2.3` is the Django app, and
+# `client-v1.2.3` is the npm package. Each workflow ignores the other's tags.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: Build and pack, but stop short of publishing
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+env:
+  # npm's trusted publishing needs a version of the CLI newer than the one the
+  # runner image ships, so both jobs install it before doing anything.
+  NPM_VERSION: "11.6.2"
+
+jobs:
+  build:
+    name: Build and check the package
+    if: github.event_name != 'release' || startsWith(github.ref_name, 'client-v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          registry-url: https://registry.npmjs.org
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install the client
+        run: npm ci
+        working-directory: client
+
+      - name: Check that the tag matches the package version
+        if: github.event_name == 'release'
+        working-directory: client
+        run: |
+          version="$(node -p 'require("./package.json").version')"
+          tag="${GITHUB_REF_NAME#client-v}"
+          if [ "$version" != "$tag" ]; then
+            echo "::error::Tag $tag does not match the version $version in client/package.json"
+            exit 1
+          fi
+
+      # npm will refuse a version that is already there, but it refuses it
+      # after the build, from inside the publishing job. Saying so up front is
+      # the difference between a clear message and a puzzling one.
+      - name: Check that the version is not already published
+        working-directory: client
+        env:
+          # Through the environment rather than interpolated into the script,
+          # which is the habit worth keeping whether or not the value is safe.
+          IS_RELEASE: ${{ github.event_name == 'release' }}
+          IS_DRY_RUN: ${{ inputs.dry-run }}
+        run: |
+          name="$(node -p 'require("./package.json").name')"
+          version="$(node -p 'require("./package.json").version')"
+          if ! npm view "$name@$version" version --loglevel error > /dev/null 2>&1; then
+            echo "$name@$version is free"
+            exit 0
+          fi
+          if [ "$IS_RELEASE" = "true" ] || [ "$IS_DRY_RUN" = "false" ]; then
+            echo "::error::$name@$version is already on npm. Bump the version first."
+            exit 1
+          fi
+          echo "::warning::$name@$version is already on npm; a real publish would be refused."
+
+      - name: Type check
+        run: npm run typecheck
+        working-directory: client
+
+      - name: Test
+        run: npm test
+        working-directory: client
+
+      - name: Build
+        run: npm run build
+        working-directory: client
+
+      # The stylesheet is copied rather than compiled, so it is the one thing a
+      # build can silently leave out.
+      - name: Check the stylesheet shipped
+        run: test -f client/dist/editor.css
+
+      - name: Pack
+        run: npm pack --pack-destination ..
+        working-directory: client
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: client-package
+          path: ./*.tgz
+          if-no-files-found: error
+
+  publish:
+    name: Publish to npm
+    needs: build
+    if: github.event_name == 'release' || inputs.dry-run == false
+    runs-on: ubuntu-latest
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/vinta-django-questionnaires-client
+    permissions:
+      # Trusted publishing: npm mints a short lived token from this, so no
+      # NODE_AUTH_TOKEN is stored anywhere. Provenance comes with it, which is
+      # why `repository.directory` in package.json has to name this subfolder.
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          registry-url: https://registry.npmjs.org
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install an npm that can publish with OIDC
+        run: npm install -g "npm@${NPM_VERSION}"
+
+      - name: Install the client
+        run: npm ci
+        working-directory: client
+
+      - name: Build
+        run: npm run build
+        working-directory: client
+
+      - name: Publish
+        run: npm publish
+        working-directory: client

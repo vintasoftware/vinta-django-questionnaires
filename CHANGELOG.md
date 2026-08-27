@@ -5,6 +5,21 @@ All notable changes to this project are documented here. The format follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [Unreleased]
+
+### Added
+
+- `publish-client.yml`, which releases the TypeScript client to npm through
+  trusted publishing on a `client-v*` tag -- type check, tests, build, a check
+  that the tag matches the version and that the version is not already there,
+  and a dry run mode that stops after `npm pack`. `publish.yml` now ignores
+  those tags, so the two packages release independently.
+- The client package declares its `repository`, `homepage` and `bugs`, and
+  ships the licence. npm's provenance attestation names the source of a build,
+  so in a repository holding two packages it needs to know which directory this
+  one lives in.
+
+
 ## [0.1.0] - 2026-08-27
 
 ### Added
@@ -163,4 +178,5 @@ All notable changes to this project are documented here. The format follows
   submission layer and reported to the client as a `policy` block on every
   response payload.
 
+[Unreleased]: https://github.com/vintasoftware/vinta-django-questionnaires/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/vintasoftware/vinta-django-questionnaires/releases/tag/v0.1.0

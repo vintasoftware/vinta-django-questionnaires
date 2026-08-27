@@ -642,13 +642,38 @@ them in the same commit.
 
 ## Releasing
 
+Two packages come out of this repository and they version independently, so the
+tag says which one is going: `vX.Y.Z` is the Django app, `client-vX.Y.Z` is the
+npm package. Each workflow ignores the other's tags.
+
+**The Django app**, to PyPI:
+
 1. Bump the version in `pyproject.toml` and move the `Unreleased` section of
    `CHANGELOG.md` under the new number.
 2. Tag the commit as `vX.Y.Z` and publish a GitHub release.
-3. The `publish.yml` workflow builds, verifies that the tag matches the version,
-   uploads to PyPI through trusted publishing, and attaches Sigstore signatures.
+3. `publish.yml` builds, verifies that the tag matches the version, uploads
+   through trusted publishing, and attaches Sigstore signatures.
 
-To rehearse a release, run the workflow manually with the `testpypi` target.
+To rehearse, run that workflow manually with the `testpypi` target.
+
+**The client**, to npm:
+
+1. Bump the version in `client/package.json`.
+2. Tag the commit as `client-vX.Y.Z` and publish a GitHub release.
+3. `publish-client.yml` type checks, tests, builds, checks that the tag matches
+   the version and that the version is not already on npm, then publishes
+   through trusted publishing.
+
+To rehearse, run that workflow manually and leave **Dry run** ticked: it does
+everything up to and including `npm pack`, uploads the tarball as an artifact,
+and stops.
+
+Neither workflow stores a token. Both mint a short-lived one from GitHub's OIDC,
+which is why each has its own deployment environment -- `pypi`, `testpypi` and
+`npm` -- named in the trusted publisher on the other side. npm's provenance
+attestation is generated automatically from the same exchange, and is why
+`client/package.json` carries a `repository` field pointing at this repository
+and the `client` directory inside it.
 
 ## Staying up to date with the template
 
