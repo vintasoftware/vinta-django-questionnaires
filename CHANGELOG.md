@@ -5,7 +5,7 @@ All notable changes to this project are documented here. The format follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [Unreleased]
+## [0.1.0] - 2026-08-27
 
 ### Added
 
@@ -163,14 +163,4 @@ All notable changes to this project are documented here. The format follows
   submission layer and reported to the client as a `policy` block on every
   response payload.
 
-
-<!--
-  On release, move the entries above under a dated heading and repoint the links:
-
-      ## [0.1.0] - YYYY-MM-DD
-
-      [Unreleased]: https://github.com/vintasoftware/vinta-django-questionnaires/compare/v0.1.0...HEAD
-      [0.1.0]: https://github.com/vintasoftware/vinta-django-questionnaires/releases/tag/v0.1.0
--->
-
-[Unreleased]: https://github.com/vintasoftware/vinta-django-questionnaires/commits/main
+[0.1.0]: https://github.com/vintasoftware/vinta-django-questionnaires/releases/tag/v0.1.0
