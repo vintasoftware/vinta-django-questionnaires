@@ -44,7 +44,9 @@ jobs:
       # tag, which is the worst moment to find it.
       - name: Check the two packages agree on the version
         run: |
-          python_version="$(uv version --short)"
+          # --color never because the workflow forces colour on, and an ANSI
+          # escape either side of the number makes two equal versions differ.
+          python_version="$(uv version --short --color never)"
           client_version="$(python3 -c 'import json; print(json.load(open("client/package.json"))["version"])')"
           if [ "$python_version" != "$client_version" ]; then
             echo "::error::pyproject.toml says $python_version, client/package.json says $client_version"
