@@ -5,6 +5,17 @@ All notable changes to this project are documented here. The format follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [Unreleased]
+
+### Fixed
+
+- The release workflow uploaded the signed artifacts to the release twice: the
+  signing action attaches them itself now, and the hand-written `gh release
+  upload` after it failed on the second copy. Both packages of 0.1.1 published
+  before it ran, and the release carries its signatures; only the workflow's
+  own result was red.
+
+
 ## [0.1.1] - 2026-08-27
 
 The two packages share a version from here on, and go out on one `vX.Y.Z` tag.
