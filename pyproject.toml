@@ -146,7 +146,11 @@ exclude = ['/migrations/']
 # alias dance those would need buys nothing here: every method is annotated already.
 # The mixins deliberately narrow `form` and `get_form`, which reads as a conflict
 # between two base classes even though it is the point of a mixin.
-module = ["vinta_django_questionnaires.admin.*", "example.admin"]
+module = [
+    "vinta_django_questionnaires.admin.*",
+    "example.admin",
+    "tests.test_admin",
+]
 disable_error_code = ["type-arg", "misc"]
 
 [[tool.mypy.overrides]]

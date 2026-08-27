@@ -160,6 +160,9 @@ jobs:
       - name: Install the project
         run: uv sync --all-groups
 
+      - name: Build the database
+        run: uv run python -m example.manage migrate --noinput
+
       # Seeding goes through save(), so this exercises the models, the widget
       # props schemas and the validator registry end to end.
       - name: Seed the example
@@ -178,7 +181,15 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: demo/package-lock.json
+          cache-dependency-path: |
+            client/package-lock.json
+            demo/package-lock.json
+
+      # The demo builds the client package before itself, so the client's own
+      # dependencies have to be here too.
+      - name: Install the client
+        run: npm ci
+        working-directory: client
 
       - name: Install the demo
         run: npm ci

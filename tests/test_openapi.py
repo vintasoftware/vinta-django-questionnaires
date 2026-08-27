@@ -9,6 +9,7 @@ paths and methods in the document is the set of paths and methods that exist.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 import yaml
@@ -29,7 +30,7 @@ METHODS = {"get", "post", "put", "patch", "delete"}
 
 
 @pytest.fixture(scope="module")
-def spec() -> dict:
+def spec() -> dict[str, Any]:
     with SPEC.open() as handle:
         return yaml.safe_load(handle)
 
@@ -55,7 +56,7 @@ def implemented() -> set[str]:
         for pattern in module.urlpatterns:
             assert isinstance(pattern, URLPattern)
             path = prefix + _as_openapi_path(str(pattern.pattern))
-            view = pattern.callback.view_class  # type: ignore[union-attr]
+            view = pattern.callback.view_class  # type: ignore[attr-defined]
             for method in sorted(METHODS):
                 if hasattr(view, method):
                     found.add(f"{method.upper()} {path}")

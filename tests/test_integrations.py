@@ -422,6 +422,7 @@ def test_a_webhook_sends_what_its_templates_resolve_to(filled, settings, monkeyp
     )
 
     delivery = deliver_webhook(webhook, filled)
+    assert delivery is not None
 
     assert sent[0].method == "POST"
     assert sent[0].headers == {"X-Source": "questionnaires", "X-Company": "Vinta"}
@@ -432,10 +433,12 @@ def test_a_webhook_sends_what_its_templates_resolve_to(filled, settings, monkeyp
 
 def test_a_get_webhook_sends_no_body(filled, monkeypatch):
     sent = []
-    monkeypatch.setattr(
-        "vinta_django_questionnaires.integrations.get_sender",
-        lambda: lambda request: sent.append(request) or WebhookResult(status_code=200),
-    )
+
+    def sender(request: WebhookRequest) -> WebhookResult:
+        sent.append(request)
+        return WebhookResult(status_code=200)
+
+    monkeypatch.setattr("vinta_django_questionnaires.integrations.get_sender", lambda: sender)
     webhook = make_webhook(filled.questionnaire_version, method="GET", body={"a": 1})
 
     deliver_webhook(webhook, filled)
@@ -451,6 +454,7 @@ def test_a_webhook_that_fails_is_recorded_and_raises_nothing(filled, monkeypatch
     webhook = make_webhook(filled.questionnaire_version)
 
     delivery = deliver_webhook(webhook, filled)
+    assert delivery is not None
 
     assert delivery.status == DeliveryStatus.FAILED
     assert delivery.status_code == 500
@@ -465,6 +469,7 @@ def test_a_webhook_whose_condition_does_not_hold_is_recorded_as_skipped(filled, 
     webhook = make_webhook(filled.questionnaire_version, condition="headcount > `100`")
 
     delivery = deliver_webhook(webhook, filled)
+    assert delivery is not None
 
     assert delivery.status == DeliveryStatus.SKIPPED
 
@@ -478,6 +483,7 @@ def test_a_url_that_will_not_build_is_recorded_rather_than_raised(filled, monkey
     )
 
     delivery = deliver_webhook(webhook, filled)
+    assert delivery is not None
 
     assert delivery.status == DeliveryStatus.SKIPPED
     assert "missing" in delivery.error

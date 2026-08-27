@@ -145,6 +145,7 @@ def test_editing_a_version_with_responses_needs_the_box_ticked(client, author, a
     assert accepted.status_code == 200
     assert Question.objects.get(key="name").title == "Full name"
     record = AcknowledgedEdit.objects.get(target_key="name")
+    assert record.acknowledged_by is not None
     assert record.acknowledged_by.username == "author"
     assert record.reason == "Clearer wording"
 

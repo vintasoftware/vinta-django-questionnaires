@@ -24,6 +24,11 @@ class Lead(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # Spelled out rather than left implicit: the type checker reads the *test*
+    # project's settings, where this app is not installed, so it cannot infer
+    # the manager Django would add.
+    objects: models.Manager[Lead] = models.Manager()
+
     class Meta:
         ordering = ["-created_at", "pk"]
 
