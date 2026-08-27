@@ -8,7 +8,7 @@
  * responses said, and the diagnostics panel shows it saying so.
  */
 
-import { registerClientValidator } from "@vintasoftware/django-questionnaires"
+import { registerClientValidator } from "vinta-django-questionnaires-client"
 
 const FREE_PROVIDERS = new Set([
   "gmail.com",

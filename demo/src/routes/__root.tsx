@@ -4,7 +4,7 @@ import { HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/react-r
 import { SessionProvider } from "../auth"
 
 import designSystem from "vinta-schedule-design-system/styles.css?url"
-import editorStyles from "@vintasoftware/django-questionnaires/editor.css?url"
+import editorStyles from "vinta-django-questionnaires-client/editor.css?url"
 import overrides from "../styles.css?url"
 
 export const Route = createRootRoute({

@@ -14,8 +14,8 @@
 import { useCallback, useEffect, useState } from "react"
 
 import { Link } from "@tanstack/react-router"
-import type { AuthoredQuestionnaire } from "@vintasoftware/django-questionnaires"
-import { QuestionnaireEditor } from "@vintasoftware/django-questionnaires/editor"
+import type { AuthoredQuestionnaire } from "vinta-django-questionnaires-client"
+import { QuestionnaireEditor } from "vinta-django-questionnaires-client/editor"
 import { Alert, AlertDescription, AlertTitle } from "vinta-schedule-design-system/ui/alert"
 import { Button } from "vinta-schedule-design-system/ui/button"
 import { Card, CardContent } from "vinta-schedule-design-system/ui/card"

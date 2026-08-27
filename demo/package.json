@@ -18,7 +18,7 @@
     "@tanstack/react-router": "^1.170.32",
     "@tanstack/react-start": "^1.168.49",
     "@tanstack/react-table": "^8.21.3",
-    "@vintasoftware/django-questionnaires": "file:../client",
+    "vinta-django-questionnaires-client": "file:../client",
     "jmespath": "^0.16.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

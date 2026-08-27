@@ -1,4 +1,4 @@
-import type { Diagnostic } from "@vintasoftware/django-questionnaires"
+import type { Diagnostic } from "vinta-django-questionnaires-client"
 import { Badge } from "vinta-schedule-design-system/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "vinta-schedule-design-system/ui/card"
 import { Text, VStack } from "vinta-schedule-design-system/layout"

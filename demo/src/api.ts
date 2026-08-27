@@ -10,7 +10,7 @@ import type {
   PageSubmitResult,
   QuestionnaireResponsePayload,
   ValidationErrorPayload,
-} from "@vintasoftware/django-questionnaires"
+} from "vinta-django-questionnaires-client"
 
 const BASE = "/demo-api"
 

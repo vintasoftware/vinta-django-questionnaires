@@ -6,7 +6,7 @@
  * component's props, so they are spread on as they arrive.
  */
 
-import type { QuestionPlan } from "@vintasoftware/django-questionnaires"
+import type { QuestionPlan } from "vinta-django-questionnaires-client"
 import { Alert, AlertDescription } from "vinta-schedule-design-system/ui/alert"
 import { Badge } from "vinta-schedule-design-system/ui/badge"
 import { Button } from "vinta-schedule-design-system/ui/button"

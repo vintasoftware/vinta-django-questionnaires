@@ -2,8 +2,8 @@
  * The drop-in editor.
  *
  * ```tsx
- * import { QuestionnaireEditor } from "@vintasoftware/django-questionnaires/editor"
- * import "@vintasoftware/django-questionnaires/editor.css"
+ * import { QuestionnaireEditor } from "vinta-django-questionnaires-client/editor"
+ * import "vinta-django-questionnaires-client/editor.css"
  *
  * <QuestionnaireEditor
  *   api={createEditorClient({ baseUrl: "/api/authoring/" })}

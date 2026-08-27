@@ -5,9 +5,9 @@
  * a respondent's browser builds from a plan -- stays free of React.
  *
  * ```tsx
- * import { QuestionnaireEditor } from "@vintasoftware/django-questionnaires/editor"
- * import { createEditorClient } from "@vintasoftware/django-questionnaires"
- * import "@vintasoftware/django-questionnaires/editor.css"
+ * import { QuestionnaireEditor } from "vinta-django-questionnaires-client/editor"
+ * import { createEditorClient } from "vinta-django-questionnaires-client"
+ * import "vinta-django-questionnaires-client/editor.css"
  * ```
  */
 

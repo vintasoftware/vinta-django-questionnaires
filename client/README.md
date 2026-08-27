@@ -1,4 +1,4 @@
-# @vintasoftware/django-questionnaires
+# vinta-django-questionnaires-client
 
 Two things for [vinta-django-questionnaires](../README.md): [Zod 4](https://zod.dev)
 schemas built from the validation plans it emits, so a questionnaire is
@@ -6,7 +6,7 @@ validated the same way in the browser and on the server -- and a React editor
 for authoring the questionnaires themselves.
 
 ```bash
-npm install @vintasoftware/django-questionnaires zod
+npm install vinta-django-questionnaires-client zod
 ```
 
 React and [dnd-kit](https://dndkit.com) are peer dependencies, and optional
@@ -21,7 +21,7 @@ npm install @dnd-kit/core @dnd-kit/sortable @dnd-kit/modifiers @dnd-kit/utilitie
 The server sends the plan; this package turns it into a schema.
 
 ```ts
-import { buildQuestionnaireSchema } from "@vintasoftware/django-questionnaires"
+import { buildQuestionnaireSchema } from "vinta-django-questionnaires-client"
 
 const plan = await fetch("/questionnaires/intake/plan").then((response) => response.json())
 const schema = buildQuestionnaireSchema(plan)
@@ -33,7 +33,7 @@ Issues land at the answering question's key, and carry the error key the
 server declared:
 
 ```ts
-import { errorKeysOf } from "@vintasoftware/django-questionnaires"
+import { errorKeysOf } from "vinta-django-questionnaires-client"
 
 if (!result.success) {
   errorKeysOf(result.error) // ["too_short"]
@@ -51,7 +51,7 @@ Responses are pushed a page at a time, and each page is validated on its own.
 `buildPageSchema` gives that page's form its schema:
 
 ```ts
-import { buildPageSchema } from "@vintasoftware/django-questionnaires"
+import { buildPageSchema } from "vinta-django-questionnaires-client"
 
 const page = plan.pages.find((entry) => entry.key === response.progress.current)!
 const schema = buildPageSchema(page, { answers: response.answers })
@@ -80,7 +80,7 @@ A validator the server marks as custom needs an implementation here, under the
 same key it is registered with in Python:
 
 ```ts
-import { registerClientValidator } from "@vintasoftware/django-questionnaires"
+import { registerClientValidator } from "vinta-django-questionnaires-client"
 
 registerClientValidator("is_company_domain", {
   validate(value, params, ctx) {
@@ -101,7 +101,7 @@ before the frontend did. That check is skipped, never blocking the respondent,
 and the server still enforces it on submit. Nothing is silent, though:
 
 ```ts
-import { onDiagnostic } from "@vintasoftware/django-questionnaires"
+import { onDiagnostic } from "vinta-django-questionnaires-client"
 
 onDiagnostic((diagnostic) => {
   Sentry.captureMessage(diagnostic.message, {
@@ -123,9 +123,9 @@ A React editor for the questionnaire definitions themselves, against the
 authoring API described in the [main README](../README.md#the-authoring-api-and-the-react-editor).
 
 ```tsx
-import { createEditorClient } from "@vintasoftware/django-questionnaires"
-import { QuestionnaireEditor } from "@vintasoftware/django-questionnaires/editor"
-import "@vintasoftware/django-questionnaires/editor.css"
+import { createEditorClient } from "vinta-django-questionnaires-client"
+import { QuestionnaireEditor } from "vinta-django-questionnaires-client/editor"
+import "vinta-django-questionnaires-client/editor.css"
 
 const api = createEditorClient({
   baseUrl: "/api/authoring/",
@@ -207,7 +207,7 @@ Or skip `editor.css` entirely and style those class names yourself.
 over a reducer that has no React in it at all:
 
 ```ts
-import { useQuestionnaireEditor } from "@vintasoftware/django-questionnaires/editor"
+import { useQuestionnaireEditor } from "vinta-django-questionnaires-client/editor"
 
 const { state, dispatch, catalog, issues, isDirty, save, fork } =
   useQuestionnaireEditor({ api, questionnaire: "intake", version: 2 })

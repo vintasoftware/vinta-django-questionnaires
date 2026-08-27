@@ -19,7 +19,7 @@ import {
   type PagePlan,
   type QuestionPlan,
   type QuestionnaireResponsePayload,
-} from "@vintasoftware/django-questionnaires"
+} from "vinta-django-questionnaires-client"
 import { Alert, AlertDescription, AlertTitle } from "vinta-schedule-design-system/ui/alert"
 import { Button } from "vinta-schedule-design-system/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "vinta-schedule-design-system/ui/card"

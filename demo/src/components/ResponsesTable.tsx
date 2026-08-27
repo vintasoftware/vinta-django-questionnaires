@@ -20,7 +20,7 @@ import {
   type ResponsePage,
   type ResponseQuery,
   type ResponseRow,
-} from "@vintasoftware/django-questionnaires"
+} from "vinta-django-questionnaires-client"
 import {
   flexRender,
   getCoreRowModel,

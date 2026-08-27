@@ -6,7 +6,7 @@
  * session cookie comes from signing in, which is what `auth.tsx` does.
  */
 
-import { createEditorClient } from "@vintasoftware/django-questionnaires"
+import { createEditorClient } from "vinta-django-questionnaires-client"
 
 import { csrfToken } from "./api"
 

@@ -19,7 +19,7 @@ All notable changes to this project are documented here. The format follows
 - A validation plan emitted per question or questionnaire version, and the
   `dump_validation_manifest` and `dump_conformance_cases` commands that write
   the artifacts under `shared/`.
-- `@vintasoftware/django-questionnaires`, the TypeScript client under
+- `vinta-django-questionnaires-client`, the TypeScript client under
   `client/`, which builds Zod 4 schemas from those plans and replays the same
   conformance corpus the Python suite runs.
 - Response models: `QuestionnaireResponse`, `PageResponse` and `Answer`. Pages

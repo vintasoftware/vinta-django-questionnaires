@@ -1,4 +1,4 @@
-import type { QuestionnairePlan, ResponseProgress } from "@vintasoftware/django-questionnaires"
+import type { QuestionnairePlan, ResponseProgress } from "vinta-django-questionnaires-client"
 import { Badge } from "vinta-schedule-design-system/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "vinta-schedule-design-system/ui/card"
 import { Progress } from "vinta-schedule-design-system/ui/progress"

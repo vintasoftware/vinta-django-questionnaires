@@ -1,5 +1,5 @@
 {
-  "name": "@vintasoftware/django-questionnaires",
+  "name": "vinta-django-questionnaires-client",
   "version": "0.1.0",
   "description": "Zod schemas and a React editor for questionnaires defined with vinta-django-questionnaires.",
   "license": "MIT",
