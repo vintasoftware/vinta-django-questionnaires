@@ -17,6 +17,7 @@ from django.utils.translation import gettext_lazy as _
 
 from vinta_django_questionnaires.models.base import MARKDOWN_HELP, BaseModel
 from vinta_django_questionnaires.models.layout import LayerMixin
+from vinta_django_questionnaires.models.scopes import ScopedModel
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -47,14 +48,13 @@ class EditPolicy(models.TextChoices):
     ALWAYS = "always", _("Always: a completed response can still be changed")
 
 
-class Questionnaire(BaseModel):
+class Questionnaire(ScopedModel, BaseModel):
     """The identity a questionnaire keeps across every version of it."""
 
     key = models.SlugField(
         _("key"),
         max_length=100,
-        unique=True,
-        help_text=_("Stable identifier, shared by every version."),
+        help_text=_("Stable identifier, shared by every version. Unique within a scope."),
     )
     name = models.CharField(
         _("name"),
@@ -69,6 +69,12 @@ class Questionnaire(BaseModel):
         verbose_name = _("questionnaire")
         verbose_name_plural = _("questionnaires")
         ordering = ["key"]
+        constraints: ClassVar = [
+            # Per scope, not globally: two tenants may each have an "intake".
+            models.UniqueConstraint(
+                fields=["scope", "key"], name="unique_questionnaire_key_per_scope"
+            ),
+        ]
 
     def __str__(self) -> str:
         return self.name or self.key

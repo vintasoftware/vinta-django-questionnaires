@@ -27,6 +27,7 @@ from django.utils.translation import gettext_lazy as _
 from vinta_django_questionnaires.conditions import validate_condition
 from vinta_django_questionnaires.models.base import BaseModel, ConditionalMixin
 from vinta_django_questionnaires.models.questionnaires import Questionnaire, QuestionnaireVersion
+from vinta_django_questionnaires.models.scopes import SCOPE_MODEL
 
 if TYPE_CHECKING:
     from django.db.models import Model
@@ -84,6 +85,19 @@ class IntegrationBase(ConditionalMixin, BaseModel):
         choices=IntegrationTrigger.choices,
         default=IntegrationTrigger.ON_COMPLETION,
     )
+    scope = models.ForeignKey(
+        SCOPE_MODEL,
+        on_delete=models.PROTECT,
+        related_name="%(app_label)s_%(class)s_set",
+        null=True,
+        blank=True,
+        verbose_name=_("scope"),
+        help_text=_(
+            "Run only for responses belonging to this scope. "
+            "Empty runs for every scope, which is what a single-tenant "
+            "installation wants and what a shared questionnaire usually does not."
+        ),
+    )
     order = models.PositiveSmallIntegerField(_("order"), default=0)
     is_active = models.BooleanField(_("is active"), default=True)
 
@@ -100,6 +114,17 @@ class IntegrationBase(ConditionalMixin, BaseModel):
             raise ValidationError(
                 {"questionnaire_version": _("That version belongs to another questionnaire.")}
             )
+
+    def applies_to_scope(self, scope_key: str) -> bool:
+        """Whether this runs for a response belonging to *scope_key*.
+
+        Unset means every scope.  It matters most for a questionnaire the whole
+        installation shares: one webhook with one URL and one set of headers
+        firing for every tenant is rarely what anybody meant.
+        """
+        if self.scope is None:
+            return True
+        return bool(self.scope.scope_key == scope_key)
 
     def applies_to(self, version: QuestionnaireVersion) -> bool:
         """Whether this runs for responses to *version*."""

@@ -138,14 +138,22 @@ def check_can_edit(version: QuestionnaireVersion, *, response_is_completed: bool
 def start_response(
     version: QuestionnaireVersion,
     *,
+    scope: Any = None,
     respondent: Any = None,
     external_id: str = "",
     context: dict[str, Any] | None = None,
 ) -> QuestionnaireResponse:
-    """Open a response, and record the pages its context already rules out."""
+    """Open a response, and record the pages its context already rules out.
+
+    *scope* is the tenant the answers belong to, and defaults to the
+    questionnaire's own.  Passing one is what makes a questionnaire the whole
+    installation shares usable by every tenant: the definition stays global
+    while each response belongs to whoever gave it.
+    """
     check_can_respond(version)
     response = QuestionnaireResponse.objects.create(
         questionnaire_version=version,
+        scope=scope if scope is not None else version.questionnaire.scope,
         respondent=respondent,
         external_id=external_id,
         context=context or {},
