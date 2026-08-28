@@ -612,7 +612,7 @@ from django.db import models
 from vinta_django_questionnaires.models import AbstractQuestionnaireScope, ScopeType
 
 
-class OrganizationScope(AbstractQuestionnaireScope[Organization]):
+class OrganizationScope(AbstractQuestionnaireScope):
     organization = models.ForeignKey(Organization, null=True, blank=True, on_delete=models.PROTECT)
 
     class Meta:

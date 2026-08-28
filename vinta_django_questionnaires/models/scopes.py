@@ -20,7 +20,7 @@ mutable scope would demand.
 
 from __future__ import annotations
 
-from typing import Any, ClassVar, Generic, TypeVar
+from typing import Any, ClassVar
 
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -34,10 +34,6 @@ from vinta_django_questionnaires.models.base import BaseModel
 #: ships, so an installation that has not overridden it still works -- the
 #: swappable machinery reads the same setting and simply finds nothing to swap.
 SCOPE_MODEL = conf.get(conf.SCOPE_MODEL, conf.DEFAULT_SCOPE_MODEL)
-
-#: What a subclass says a scope *is*.  Spelled the old way rather than with
-#: PEP 695 syntax because this package still supports Python 3.10.
-ScopeValue = TypeVar("ScopeValue")
 
 
 class ScopeType(models.TextChoices):
@@ -53,13 +49,21 @@ class ScopeType(models.TextChoices):
     SCOPED = "scoped", _("Scoped")
 
 
-class AbstractQuestionnaireScope(BaseModel, Generic[ScopeValue]):
+class AbstractQuestionnaireScope(BaseModel):
     """The tenant boundary, with the one rule that holds whatever it is.
 
     Subclasses decide what a scope *is* by implementing the ``scope`` property
     over whatever columns suit them -- a foreign key, a string, a composite --
     while this class owns the invariant that holds whatever they choose:
     ``scope_type`` and ``scope`` agree, always.
+
+    Deliberately **not** generic in what ``scope`` returns, tempting as that
+    is.  A ``Generic`` base lands in the model's ``__bases__``, Django's
+    autodetector writes it into the subclass's migration as
+    ``bases=(models.Model, typing.Generic)``, and rendering that historical
+    model on Django 5.2 raises ``TypeError: Cannot inherit from plain
+    Generic``.  It bought one annotation, and the subclass's own ``scope``
+    override is a better place to say the same thing.
     """
 
     scope_type = models.CharField(
@@ -85,8 +89,11 @@ class AbstractQuestionnaireScope(BaseModel, Generic[ScopeValue]):
 
     # -- what a scope is ---------------------------------------------------
     @property
-    def scope(self) -> ScopeValue | None:
-        """The thing this scope names, or ``None`` for the global scope."""
+    def scope(self) -> Any:
+        """The thing this scope names, or ``None`` for the global scope.
+
+        Subclasses narrow this: ``-> Organization | None``, and so on.
+        """
         raise NotImplementedError("Subclasses decide what a scope is.")
 
     def build_scope_key(self) -> str:
@@ -131,7 +138,7 @@ class AbstractQuestionnaireScope(BaseModel, Generic[ScopeValue]):
         super().save(*args, **kwargs)
 
 
-class QuestionnaireScope(AbstractQuestionnaireScope[str]):
+class QuestionnaireScope(AbstractQuestionnaireScope):
     """The scope model this package ships: an opaque string.
 
     Enough for a project with no tenant concept, which is why it is the default

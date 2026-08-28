@@ -23,7 +23,7 @@ class Organization(models.Model):
         return self.name or self.slug
 
 
-class OrganizationScope(AbstractQuestionnaireScope[Organization]):
+class OrganizationScope(AbstractQuestionnaireScope):
     """A scope that is an organization, or the installation at large."""
 
     organization = models.ForeignKey(
