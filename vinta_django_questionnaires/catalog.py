@@ -31,6 +31,7 @@ from vinta_django_questionnaires.question_types import (
     SCALAR_TYPES,
     QuestionType,
 )
+from vinta_django_questionnaires.scoping import ScopeFilter
 from vinta_django_questionnaires.validators import registry
 
 if TYPE_CHECKING:
@@ -115,7 +116,11 @@ def widget_catalog() -> list[dict[str, Any]]:
     ]
 
 
-def value_set_catalog() -> list[dict[str, Any]]:
+def value_set_catalog(scopes: ScopeFilter | None = None) -> list[dict[str, Any]]:
+    """The value sets in view, tenant-owned and installation-wide alike."""
+    queryset = (scopes or ScopeFilter.everything()).apply(
+        ValueSet.objects.all(), field="scope__scope_key"
+    )
     return [
         {
             "key": value_set.key,
@@ -124,12 +129,15 @@ def value_set_catalog() -> list[dict[str, Any]]:
             "source": value_set.source,
             "resolvedByTheClient": value_set.is_resolved_by_the_client,
         }
-        for value_set in ValueSet.objects.all()
+        for value_set in queryset
     ]
 
 
-def questionnaire_catalog() -> list[dict[str, Any]]:
+def questionnaire_catalog(scopes: ScopeFilter | None = None) -> list[dict[str, Any]]:
     """The questionnaires a question could nest, and their versions."""
+    queryset = (scopes or ScopeFilter.everything()).apply(
+        Questionnaire.objects.filter(is_active=True), field="scope__scope_key"
+    )
     return [
         {
             "key": questionnaire.key,
@@ -143,14 +151,17 @@ def questionnaire_catalog() -> list[dict[str, Any]]:
                 for version in questionnaire.versions.all()
             ],
         }
-        for questionnaire in Questionnaire.objects.filter(is_active=True).prefetch_related(
-            "versions"
-        )
+        for questionnaire in queryset.prefetch_related("versions")
     ]
 
 
-def editor_catalog() -> dict[str, Any]:
-    """Everything an editor needs to offer choices, in one payload."""
+def editor_catalog(*, scopes: ScopeFilter | None = None) -> dict[str, Any]:
+    """Everything an editor needs to offer choices, in one payload.
+
+    *scopes* narrows the two entries that are rows rather than code -- the
+    value sets and the questionnaires.  The question types, validators and
+    widgets are the installation's own and the same everywhere.
+    """
     return {
         "catalogVersion": CATALOG_VERSION,
         "defaultColumnCount": DEFAULT_COLUMN_COUNT,
@@ -158,8 +169,8 @@ def editor_catalog() -> dict[str, Any]:
         "scalarQuestionTypes": sorted(SCALAR_TYPES),
         "validators": validator_catalog(),
         "widgets": widget_catalog(),
-        "valueSets": value_set_catalog(),
-        "questionnaires": questionnaire_catalog(),
+        "valueSets": value_set_catalog(scopes),
+        "questionnaires": questionnaire_catalog(scopes),
         "choiceAxes": _choices(ChoiceAxis),
         "sectionStates": _choices(SectionState),
         "versionStatuses": _choices(VersionStatus),

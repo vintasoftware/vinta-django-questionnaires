@@ -111,8 +111,19 @@ class QuestionnaireVersionInline(admin.TabularInline):
 class QuestionnaireAdmin(QuestionnaireAssets, admin.ModelAdmin):
     """A questionnaire is a key with versions; this is mostly a way to its versions."""
 
-    list_display = ("key", "name", "is_active", "version_count", "response_count", "shortcuts")
-    list_filter = ("is_active",)
+    list_display = (
+        "key",
+        "name",
+        "scope",
+        "is_active",
+        "version_count",
+        "response_count",
+        "shortcuts",
+    )
+    # ``RelatedOnlyFieldListFilter`` rather than a bare "scope": it offers
+    # only the scopes that actually have questionnaires, which is the
+    # difference between a usable control and one listing every tenant.
+    list_filter = (("scope", admin.RelatedOnlyFieldListFilter), "is_active")
     search_fields = ("key", "name")
     inlines = [QuestionnaireVersionInline]
 
@@ -217,7 +228,12 @@ class QuestionnaireVersionAdmin(QuestionnaireAssets, admin.ModelAdmin):
         "question_count",
         "shortcuts",
     )
-    list_filter = ("status", "edit_policy", "questionnaire")
+    list_filter = (
+        ("questionnaire__scope", admin.RelatedOnlyFieldListFilter),
+        "status",
+        "edit_policy",
+        "questionnaire",
+    )
     search_fields = ("questionnaire__key", "questionnaire__name", "title")
     autocomplete_fields = ("questionnaire",)
     inlines = [WindowSizeRangeInline, VersionColumnsInline]
@@ -484,9 +500,31 @@ class ValueSetOptionInline(admin.TabularInline):
     extra = 0
 
 
+class QuestionnaireScopeAdmin(admin.ModelAdmin):
+    """The tenant boundary itself.
+
+    Only registered when this installation uses the scope model this package
+    ships: a project that swapped it has its own model, in its own app, and
+    wants its own admin for it.
+    """
+
+    list_display = ("__str__", "scope_type", "scope_key", "label")
+    list_filter = ("scope_type",)
+    search_fields = ("scope_key", "label")
+    readonly_fields = ("scope_key",)
+
+    def get_readonly_fields(self, request: HttpRequest, obj: Any = None) -> tuple[str, ...]:
+        """``scope_key`` is derived, and moving a scope orphans its responses.
+
+        The key is built from the columns beside it on every save, so offering
+        it as a field would be offering a value that gets overwritten.
+        """
+        return self.readonly_fields
+
+
 class ValueSetAdmin(admin.ModelAdmin):
-    list_display = ("key", "name", "source", "option_count")
-    list_filter = ("source",)
+    list_display = ("key", "name", "scope", "source", "option_count")
+    list_filter = (("scope", admin.RelatedOnlyFieldListFilter), "source")
     search_fields = ("key", "name")
     inlines = [ValueSetOptionInline]
 

@@ -14,8 +14,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from django.core.exceptions import PermissionDenied
-from django.http import HttpResponse, JsonResponse, StreamingHttpResponse
-from django.shortcuts import get_object_or_404
+from django.http import Http404, HttpResponse, JsonResponse, StreamingHttpResponse
 from django.utils.translation import gettext_lazy as _
 
 from vinta_django_questionnaires.catalog import editor_catalog
@@ -29,7 +28,9 @@ from vinta_django_questionnaires.models import (
     Questionnaire,
     QuestionnaireResponse,
     QuestionnaireVersion,
+    get_global_scope,
 )
+from vinta_django_questionnaires.models_registry import get_scope_model
 from vinta_django_questionnaires.reporting import (
     DEFAULT_PAGE_SIZE,
     MAX_PAGE_SIZE,
@@ -40,6 +41,7 @@ from vinta_django_questionnaires.reporting import (
     rows_for,
     select_columns,
 )
+from vinta_django_questionnaires.scoping import ScopeFilter
 from vinta_django_questionnaires.submissions import SubmissionError
 from vinta_django_questionnaires.versioning import new_version_from
 from vinta_django_questionnaires.views import ApiView
@@ -50,24 +52,134 @@ if TYPE_CHECKING:
 
 
 class AuthoringAccessMixin:
-    """Who may read and change a questionnaire's definition."""
+    """Who may read and change a questionnaire's definition, and whose.
+
+    The scope comes from the URL rather than from anything ambient.  A project
+    that wants a tenant boundary on these endpoints wraps the URLconf::
+
+        path(
+            "api/authoring/scopes/<slug:scope_key>/",
+            include("vinta_django_questionnaires.editor_urls"),
+        )
+
+    and Django hands the capture to every view underneath.  Included without a
+    prefix -- which is what a single-tenant installation does -- no scope
+    arrives and every scope is in view.
+
+    Naming the scope in the path is what turns "did this view remember to
+    filter?" into "did this request pass the check?".  The second is a question
+    with one answer, in one place: :meth:`check_scope_access`.
+    """
+
+    #: Django puts every URL capture here, whether or not a handler names it.
+    kwargs: dict[str, Any]
 
     def check_access(self, request: HttpRequest) -> None:
         if not request.user.is_staff:
             raise PermissionDenied(_("You may not edit questionnaires."))
 
+    def get_scope_key(self, request: HttpRequest) -> str:
+        """The scope this request is about, or ``""`` for "every scope"."""
+        return str(self.kwargs.get("scope_key") or "")
+
+    def check_scope_access(self, request: HttpRequest, scope_key: str) -> None:
+        """Whether this user may act inside *scope_key*.
+
+        Open by default, because reaching here already means
+        :meth:`check_access` was satisfied -- staff, who see every tenant.  A
+        project that lets a tenant's own people author their questionnaires
+        overrides both: ``check_access`` to admit them, and this to pin them to
+        their own scope.
+        """
+
+    def get_scopes(self, request: HttpRequest) -> ScopeFilter:
+        """The scopes whose **responses** this request may read.
+
+        No global fallback: a response always belongs to somebody, so asking
+        for one tenant's responses must never turn up another's -- or the
+        installation's, which has none of its own.
+        """
+        key = self.get_scope_key(request)
+        if not key:
+            return ScopeFilter.everything()
+        self.check_scope_access(request, key)
+        return ScopeFilter.only(key)
+
+    def get_definition_scopes(self, request: HttpRequest) -> ScopeFilter:
+        """The scopes whose **questionnaires** this request may use.
+
+        Global included, unlike :meth:`get_scopes`: a questionnaire the whole
+        installation shares is one every tenant can author against and answer.
+        """
+        key = self.get_scope_key(request)
+        if not key:
+            return ScopeFilter.everything()
+        self.check_scope_access(request, key)
+        return ScopeFilter.only(key, include_global=True)
+
+    def get_questionnaire_queryset(self, request: HttpRequest) -> QuerySet[Questionnaire]:
+        return self.get_definition_scopes(request).apply(
+            Questionnaire.objects.all(), field="scope__scope_key"
+        )
+
     def get_version_queryset(self, request: HttpRequest) -> QuerySet[QuestionnaireVersion]:
-        return QuestionnaireVersion.objects.select_related("questionnaire")
+        return self.get_definition_scopes(request).apply(
+            QuestionnaireVersion.objects.select_related("questionnaire"),
+            field="questionnaire__scope__scope_key",
+        )
 
     def get_version(
         self, request: HttpRequest, questionnaire_key: str, version: int
     ) -> QuestionnaireVersion:
+        """One version, resolved most-specific-first.
+
+        A key is unique within a scope, so a tenant that has made its own
+        ``intake`` and the installation-wide ``intake`` are both candidates.
+        The tenant's own wins -- which is what lets a tenant override a shared
+        questionnaire without the installation having to anticipate it.
+        """
         self.check_access(request)
-        return get_object_or_404(
-            self.get_version_queryset(request),
-            questionnaire__key=questionnaire_key,
-            version=version,
+        candidates = self.get_version_queryset(request).filter(
+            questionnaire__key=questionnaire_key, version=version
         )
+        key = self.get_scope_key(request)
+        if key:
+            own = candidates.filter(questionnaire__scope__scope_key=key).first()
+            if own is not None:
+                return own
+        found = candidates.first()
+        if found is None:
+            raise Http404(_("No questionnaire version matches that."))
+        return found
+
+    def get_questionnaire(self, request: HttpRequest, questionnaire_key: str) -> Questionnaire:
+        """One questionnaire by key, resolved the same way as a version."""
+        candidates = self.get_questionnaire_queryset(request).filter(key=questionnaire_key)
+        key = self.get_scope_key(request)
+        if key:
+            own = candidates.filter(scope__scope_key=key).first()
+            if own is not None:
+                return own
+        found = candidates.first()
+        if found is None:
+            raise Http404(_("No questionnaire matches that."))
+        return found
+
+    def get_target_scope(self, request: HttpRequest) -> Any:
+        """Where something created through this request lands.
+
+        The scope the URL named, or the global one -- so a single-tenant
+        installation, which names no scope, goes on behaving as it always did.
+        """
+        key = self.get_scope_key(request)
+        if not key:
+            return get_global_scope()
+        self.check_scope_access(request, key)
+        model = get_scope_model()
+        scope = model._default_manager.filter(scope_key=key).first()
+        if scope is None:
+            raise Http404(_("No such scope."))
+        return scope
 
     def get_acknowledgement(
         self, request: HttpRequest, payload: dict[str, Any]
@@ -89,17 +201,21 @@ class AuthoringAccessMixin:
 class EditorCatalogView(AuthoringAccessMixin, ApiView):
     """``GET /editor/catalog/`` -- the types, validators and widgets there are."""
 
-    def get(self, request: HttpRequest) -> HttpResponse:
+    def get(self, request: HttpRequest, **kwargs: Any) -> HttpResponse:
         self.check_access(request)
-        return JsonResponse(editor_catalog())
+        return JsonResponse(editor_catalog(scopes=self.get_definition_scopes(request)))
 
 
 class VersionListView(AuthoringAccessMixin, ApiView):
     """``GET /editor/versions/`` -- what there is to edit."""
 
-    def get(self, request: HttpRequest) -> HttpResponse:
+    def get(self, request: HttpRequest, **kwargs: Any) -> HttpResponse:
         self.check_access(request)
-        questionnaires = Questionnaire.objects.prefetch_related("versions")
+        questionnaires = (
+            self.get_questionnaire_queryset(request)
+            .select_related("scope")
+            .prefetch_related("versions")
+        )
         return JsonResponse(
             {
                 "questionnaires": [
@@ -107,6 +223,11 @@ class VersionListView(AuthoringAccessMixin, ApiView):
                         "key": questionnaire.key,
                         "name": questionnaire.name,
                         "isActive": questionnaire.is_active,
+                        # Which scope a questionnaire lives in, so a client
+                        # never has to guess -- and so a tenant can tell its
+                        # own "intake" from the shared one.
+                        "scope": questionnaire.scope.scope_key,
+                        "isGlobal": not questionnaire.scope.scope_key,
                         "versions": [
                             {
                                 "version": version.version,
@@ -132,11 +253,15 @@ class VersionDefinitionView(AuthoringAccessMixin, ApiView):
     editor addresses its own state.
     """
 
-    def get(self, request: HttpRequest, questionnaire_key: str, version: int) -> HttpResponse:
+    def get(
+        self, request: HttpRequest, questionnaire_key: str, version: int, **kwargs: Any
+    ) -> HttpResponse:
         questionnaire_version = self.get_version(request, questionnaire_key, version)
         return JsonResponse({"document": definition_document(questionnaire_version)})
 
-    def put(self, request: HttpRequest, questionnaire_key: str, version: int) -> HttpResponse:
+    def put(
+        self, request: HttpRequest, questionnaire_key: str, version: int, **kwargs: Any
+    ) -> HttpResponse:
         questionnaire_version = self.get_version(request, questionnaire_key, version)
         payload = self.body(request)
         document = payload.get("document")
@@ -153,7 +278,9 @@ class VersionDefinitionView(AuthoringAccessMixin, ApiView):
         questionnaire_version.refresh_from_db()
         return JsonResponse({"document": definition_document(questionnaire_version)})
 
-    def delete(self, request: HttpRequest, questionnaire_key: str, version: int) -> HttpResponse:
+    def delete(
+        self, request: HttpRequest, questionnaire_key: str, version: int, **kwargs: Any
+    ) -> HttpResponse:
         """Drop a draft. Refused once the version has been answered.
 
         Deleting a version someone filled in is not an edit anyone should be
@@ -177,7 +304,9 @@ class VersionForkView(AuthoringAccessMixin, ApiView):
     the copy, publish that.
     """
 
-    def post(self, request: HttpRequest, questionnaire_key: str, version: int) -> HttpResponse:
+    def post(
+        self, request: HttpRequest, questionnaire_key: str, version: int, **kwargs: Any
+    ) -> HttpResponse:
         questionnaire_version = self.get_version(request, questionnaire_key, version)
         payload = self.body(request)
         overrides: dict[str, Any] = {}
@@ -194,16 +323,17 @@ class QuestionnaireCollectionView(AuthoringAccessMixin, ApiView):
     with, so one comes with the other.
     """
 
-    def post(self, request: HttpRequest) -> HttpResponse:
+    def post(self, request: HttpRequest, **kwargs: Any) -> HttpResponse:
         self.check_access(request)
         payload = self.body(request)
         key = str(payload.get("key") or "").strip()
         name = str(payload.get("name") or "").strip()
         if not key:
             raise SubmissionError(_("A questionnaire needs a key."))
-        if Questionnaire.objects.filter(key=key).exists():
-            raise SubmissionError(_("A questionnaire with that key already exists."))
-        questionnaire = Questionnaire.objects.create(key=key, name=name or key)
+        scope = self.get_target_scope(request)
+        if Questionnaire.objects.filter(scope=scope, key=key).exists():
+            raise SubmissionError(_("A questionnaire with that key already exists here."))
+        questionnaire = Questionnaire.objects.create(scope=scope, key=key, name=name or key)
         version = QuestionnaireVersion.objects.create(
             questionnaire=questionnaire,
             version=1,
@@ -221,9 +351,9 @@ class QuestionnaireDetailView(AuthoringAccessMixin, ApiView):
     clicking once; fork, or archive it by making it inactive.
     """
 
-    def delete(self, request: HttpRequest, questionnaire_key: str) -> HttpResponse:
+    def delete(self, request: HttpRequest, questionnaire_key: str, **kwargs: Any) -> HttpResponse:
         self.check_access(request)
-        questionnaire = get_object_or_404(Questionnaire, key=questionnaire_key)
+        questionnaire = self.get_questionnaire(request, questionnaire_key)
         answered = QuestionnaireResponse.objects.filter(
             questionnaire_version__questionnaire=questionnaire
         ).count()
@@ -244,7 +374,7 @@ class ResponseListView(AuthoringAccessMixin, ApiView):
     questionnaire asks to render it.
     """
 
-    def get(self, request: HttpRequest) -> HttpResponse:
+    def get(self, request: HttpRequest, **kwargs: Any) -> HttpResponse:
         self.check_access(request)
         version = self.get_filtered_version(request)
         available = columns_for(version)
@@ -252,6 +382,7 @@ class ResponseListView(AuthoringAccessMixin, ApiView):
         columns = select_columns(available, requested)
 
         queryset = response_queryset(
+            scopes=self.get_scopes(request),
             questionnaire=request.GET.get("questionnaire", ""),
             version=self.get_version_number(request),
             status=request.GET.get("status", ""),
@@ -304,7 +435,12 @@ class ResponseListView(AuthoringAccessMixin, ApiView):
         if not key:
             return None
         number = self.get_version_number(request)
-        versions = QuestionnaireVersion.objects.filter(questionnaire__key=key)
+        # Through the mixin, so the columns can only ever come from a
+        # questionnaire this request is allowed to see.
+        versions = self.get_version_queryset(request).filter(questionnaire__key=key)
+        scope_key = self.get_scope_key(request)
+        if scope_key:
+            versions = versions.filter(questionnaire__scope__scope_key=scope_key)
         if number is not None:
             return versions.filter(version=number).first()
         return versions.order_by("-version").first()
@@ -320,12 +456,13 @@ class ResponseExportView(ResponseListView):
 
     filename = "questionnaire-responses.csv"
 
-    def get(self, request: HttpRequest) -> StreamingHttpResponse:  # type: ignore[override]
+    def get(self, request: HttpRequest, **kwargs: Any) -> StreamingHttpResponse:  # type: ignore[override]
         self.check_access(request)
         version = self.get_filtered_version(request)
         requested = [key for key in request.GET.get("columns", "").split(",") if key]
         columns = select_columns(columns_for(version), requested)
         queryset = response_queryset(
+            scopes=self.get_scopes(request),
             questionnaire=request.GET.get("questionnaire", ""),
             version=self.get_version_number(request),
             status=request.GET.get("status", ""),

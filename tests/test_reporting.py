@@ -21,7 +21,12 @@ from vinta_django_questionnaires.reporting import (
     rows_for,
     select_columns,
 )
+from vinta_django_questionnaires.scoping import ScopeFilter
 from vinta_django_questionnaires.submissions import start_response, submit_page
+
+#: This suite has one scope, so every read here means every scope -- said
+#: once, out loud, which is the point of the argument being required.
+EVERYTHING = ScopeFilter.everything()
 
 
 @pytest.fixture
@@ -98,7 +103,9 @@ def test_asking_for_nothing_gets_everything(answered):
 
 def test_a_row_holds_the_metadata_and_the_answers(answered):
     columns = select_columns(columns_for(answered), ["id", "status", "email", "languages"])
-    responses = list(response_queryset(questionnaire="intake").order_by("created_at"))
+    responses = list(
+        response_queryset(scopes=EVERYTHING, questionnaire="intake").order_by("created_at")
+    )
 
     rows = rows_for(responses, columns)
 
@@ -113,17 +120,17 @@ def test_the_rows_of_a_page_take_one_query_whatever_the_row_count(
 ):
     """The listing must not cost a query per row, which is what a table is for."""
     columns = select_columns(columns_for(answered), ["id", "email", "progress", "status"])
-    responses = list(response_queryset())
+    responses = list(response_queryset(scopes=EVERYTHING))
 
     with django_assert_num_queries(1):
         rows_for(responses, columns)
 
 
 def test_filtering_narrows_the_queryset(answered):
-    assert response_queryset(questionnaire="intake").count() == 3
-    assert response_queryset(status="completed").count() == 2
-    assert response_queryset(questionnaire="nope").count() == 0
-    assert response_queryset(search="unfinished").count() == 1
+    assert response_queryset(scopes=EVERYTHING, questionnaire="intake").count() == 3
+    assert response_queryset(scopes=EVERYTHING, status="completed").count() == 2
+    assert response_queryset(scopes=EVERYTHING, questionnaire="nope").count() == 0
+    assert response_queryset(scopes=EVERYTHING, search="unfinished").count() == 1
 
 
 # ---------------------------------------------------------------------- CSV
@@ -142,7 +149,11 @@ def test_a_cell_holds_whatever_the_answer_was():
 def test_the_export_streams_a_header_and_a_line_per_response(answered):
     columns = select_columns(columns_for(answered), ["status", "email", "languages"])
 
-    text = "".join(csv_rows(response_queryset(questionnaire="intake"), columns, chunk_size=2))
+    text = "".join(
+        csv_rows(
+            response_queryset(scopes=EVERYTHING, questionnaire="intake"), columns, chunk_size=2
+        )
+    )
     lines = [line for line in text.splitlines() if line]
 
     assert lines[0] == "Status,Email,Languages"
