@@ -20,6 +20,7 @@ from vinta_django_questionnaires.filters import (
     validate_filter_expression,
 )
 from vinta_django_questionnaires.models.base import MARKDOWN_HELP, BaseModel
+from vinta_django_questionnaires.models.scopes import ScopedModel
 
 if TYPE_CHECKING:
     from django.db.models import QuerySet
@@ -36,10 +37,10 @@ class HttpMethod(models.TextChoices):
     POST = "POST", _("POST")
 
 
-class ValueSet(BaseModel):
+class ValueSet(ScopedModel, BaseModel):
     """A named set of options questions can select from."""
 
-    key = models.SlugField(_("key"), max_length=100, unique=True)
+    key = models.SlugField(_("key"), max_length=100)
     name = models.CharField(_("name"), max_length=255)
     description = models.TextField(
         _("description"), blank=True, default="", help_text=MARKDOWN_HELP
@@ -118,6 +119,13 @@ class ValueSet(BaseModel):
         verbose_name = _("value set")
         verbose_name_plural = _("value sets")
         ordering = ["key"]
+        constraints = [
+            # Per scope, like a questionnaire: a tenant may override a
+            # shared "countries" list with one of its own.
+            models.UniqueConstraint(
+                fields=["scope", "key"], name="unique_value_set_key_per_scope"
+            ),
+        ]
 
     def __str__(self) -> str:
         return self.name or self.key

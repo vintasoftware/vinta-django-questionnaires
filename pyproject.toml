@@ -169,13 +169,22 @@ warn_unreachable = false
 warn_return_any = false
 
 [tool.django-stubs]
-django_settings_module = "tests.settings"
+# The swapped settings, not the plain ones: they are a superset -- every app of
+# the ordinary run plus `tests.scopedapp` -- so this is the only configuration
+# in which the plugin can see every model the suite defines.  Checked against
+# `tests.settings` instead, the swapped scope app has no managers and no
+# implicit `_id` attributes, and the whole of `tests/scoped` goes unchecked.
+django_settings_module = "tests.settings_scoped"
 
 # ---------------------------------------------------------------- pytest
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "tests.settings"
 pythonpath = ["."]
+# `tests/scoped` is deliberately left out: it is the swapped-model run, which
+# needs its own settings module because `Meta.swappable` resolves once per
+# process.  It runs as `pytest tests/scoped --ds=tests.settings_scoped`.
 testpaths = ["tests"]
+norecursedirs = ["tests/scoped"]
 addopts = "--strict-markers --strict-config -ra"
 filterwarnings = ["error"]
 

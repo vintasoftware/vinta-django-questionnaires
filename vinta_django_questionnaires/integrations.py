@@ -74,6 +74,9 @@ def response_document(response: QuestionnaireResponse) -> dict[str, Any]:
         "status": response.status,
         "questionnaire": version.questionnaire.key,
         "version": version.version,
+        # The tenant this response belongs to, so a URL template can say
+        # `{scope}` and a shared questionnaire can still reach the right place.
+        "scope": response.scope_key,
         "external_id": response.external_id,
         "respondent": _respondent(response),
         "completed_at": response.completed_at.isoformat() if response.completed_at else None,
@@ -135,8 +138,8 @@ def mappings_for(response: QuestionnaireResponse, *, trigger: str) -> list[Respo
         mapping
         for mapping in ResponseMapping.objects.filter(
             questionnaire=version.questionnaire, is_active=True, trigger=trigger
-        ).select_related("content_type")
-        if mapping.applies_to(version)
+        ).select_related("content_type", "scope")
+        if mapping.applies_to(version) and mapping.applies_to_scope(response.scope_key)
     ]
 
 
@@ -361,8 +364,8 @@ def webhooks_for(response: QuestionnaireResponse, *, trigger: str) -> list[Respo
         webhook
         for webhook in ResponseWebhook.objects.filter(
             questionnaire=version.questionnaire, is_active=True, trigger=trigger
-        )
-        if webhook.applies_to(version)
+        ).select_related("scope")
+        if webhook.applies_to(version) and webhook.applies_to_scope(response.scope_key)
     ]
 
 

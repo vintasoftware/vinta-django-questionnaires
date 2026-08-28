@@ -16,7 +16,7 @@ import json
 from typing import TYPE_CHECKING, Any
 
 from django.core.exceptions import PermissionDenied
-from django.http import HttpRequest, HttpResponse, HttpResponseBase, JsonResponse
+from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBase, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
 from django.views import View
@@ -30,6 +30,7 @@ from vinta_django_questionnaires.models import (
     ValueSet,
     VersionStatus,
 )
+from vinta_django_questionnaires.models_registry import get_scope_model
 from vinta_django_questionnaires.plan import questionnaire_plan
 from vinta_django_questionnaires.submissions import (
     EditingNotAllowed,
@@ -133,7 +134,41 @@ class ApiView(View):
 
 
 class ResponseAccessMixin:
-    """Who may open and see responses.  Override for anonymous respondents."""
+    """Who may open and see responses.  Override for anonymous respondents.
+
+    Like the authoring API, the tenant comes from the URL when there is one::
+
+        path(
+            "api/questionnaires/scopes/<slug:scope_key>/",
+            include("vinta_django_questionnaires.urls"),
+        )
+
+    Included without a prefix -- the single-tenant case -- a new response takes
+    the questionnaire's own scope, which is what every existing installation
+    already gets.
+    """
+
+    #: Django puts every URL capture here, whether or not a handler names it.
+    kwargs: dict[str, Any]
+
+    def get_scope_key(self, request: HttpRequest) -> str:
+        return str(self.kwargs.get("scope_key") or "")
+
+    def get_scope(self, request: HttpRequest, version: QuestionnaireVersion) -> Any:
+        """The tenant a new response belongs to.
+
+        The scope the URL named, or the questionnaire's own -- which for a
+        questionnaire the whole installation shares is the global scope, and
+        for a tenant's own questionnaire is that tenant.
+        """
+        key = self.get_scope_key(request)
+        if not key:
+            return version.questionnaire.scope
+        model = get_scope_model()
+        scope = model._default_manager.filter(scope_key=key).first()
+        if scope is None:
+            raise Http404(_("No such scope."))
+        return scope
 
     def check_access(self, request: HttpRequest) -> None:
         if not request.user.is_authenticated:
@@ -153,6 +188,28 @@ class ResponseAccessMixin:
 
     def get_page(self, response: QuestionnaireResponse, page_key: str) -> Page:
         return get_object_or_404(response.questionnaire_version.pages, key=page_key)
+
+    def get_value_set(self, request: HttpRequest, key: str) -> ValueSet:
+        """One value set by key, most-specific-first.
+
+        A key is unique within a scope, so a tenant may hold its own
+        ``countries`` beside the one the installation shares.  The tenant's own
+        wins, which is what makes overriding a shared list possible without the
+        installation anticipating it.
+        """
+        scope_key = self.get_scope_key(request)
+        if scope_key:
+            own = ValueSet.objects.filter(scope__scope_key=scope_key, key=key).first()
+            if own is not None:
+                return own
+        found = ValueSet.objects.filter(scope__scope_key="", key=key).first()
+        if found is None:
+            # No scope in the URL at all: a single-tenant installation, where
+            # the key is as unique as it ever was.
+            found = ValueSet.objects.filter(key=key).first() if not scope_key else None
+        if found is None:
+            raise Http404(_("No such value set."))
+        return found
 
 
 class ResponseCreateView(ResponseAccessMixin, ApiView):
@@ -181,14 +238,16 @@ class ResponseCreateView(ResponseAccessMixin, ApiView):
         """How a respondent who is not a user of this system is identified."""
         return str(payload.get("externalId") or "")
 
-    def post(self, request: HttpRequest) -> HttpResponse:
+    def post(self, request: HttpRequest, **kwargs: Any) -> HttpResponse:
         self.check_access(request)
         payload = self.body(request)
         context = payload.get("context") or {}
         if not isinstance(context, dict):
             raise SubmissionError(_("The context must be an object."))
+        version = self.get_version(request, payload)
         response = start_response(
-            self.get_version(request, payload),
+            version,
+            scope=self.get_scope(request, version),
             respondent=self.get_respondent(request),
             external_id=self.get_external_id(request, payload),
             context=context,
@@ -199,7 +258,7 @@ class ResponseCreateView(ResponseAccessMixin, ApiView):
 class ResponseDetailView(ResponseAccessMixin, ApiView):
     """``GET /responses/<id>/`` -- where the respondent is, and what to render."""
 
-    def get(self, request: HttpRequest, response_uuid: Any) -> HttpResponse:
+    def get(self, request: HttpRequest, response_uuid: Any, **kwargs: Any) -> HttpResponse:
         response = self.get_response(request, response_uuid)
         include_plan = request.GET.get("plan", "1") not in {"0", "false"}
         return JsonResponse(serialize_response(response, include_plan=include_plan))
@@ -212,7 +271,9 @@ class PageSubmitView(ResponseAccessMixin, ApiView):
     not validate is rejected whole, with the issues keyed by question.
     """
 
-    def post(self, request: HttpRequest, response_uuid: Any, page_key: str) -> HttpResponse:
+    def post(
+        self, request: HttpRequest, response_uuid: Any, page_key: str, **kwargs: Any
+    ) -> HttpResponse:
         response = self.get_response(request, response_uuid)
         page = self.get_page(response, page_key)
         answers = self.body(request).get("answers", {})
@@ -235,9 +296,9 @@ class ValueSetOptionsView(ResponseAccessMixin, ApiView):
     the options out of its reply.
     """
 
-    def get(self, request: HttpRequest, key: str) -> HttpResponse:
+    def get(self, request: HttpRequest, key: str, **kwargs: Any) -> HttpResponse:
         self.check_access(request)
-        value_set = get_object_or_404(ValueSet, key=key)
+        value_set = self.get_value_set(request, key)
         if value_set.is_resolved_by_the_client:
             return JsonResponse(
                 {
@@ -258,7 +319,9 @@ class ValueSetOptionsView(ResponseAccessMixin, ApiView):
 class PageSkipView(ResponseAccessMixin, ApiView):
     """``POST /responses/<id>/pages/<key>/skip/`` -- leave a page for later."""
 
-    def post(self, request: HttpRequest, response_uuid: Any, page_key: str) -> HttpResponse:
+    def post(
+        self, request: HttpRequest, response_uuid: Any, page_key: str, **kwargs: Any
+    ) -> HttpResponse:
         response = self.get_response(request, response_uuid)
         page = self.get_page(response, page_key)
         page_response = skip_page(response, page)

@@ -49,6 +49,7 @@ from vinta_django_questionnaires.admin.definition import (
     QuestionAdmin,
     QuestionnaireAdmin,
     QuestionnaireAssets,
+    QuestionnaireScopeAdmin,
     QuestionnaireVersionAdmin,
     QuestionnaireWidgetAdmin,
     SectionAdmin,
@@ -81,6 +82,7 @@ from vinta_django_questionnaires.models import (
     Question,
     Questionnaire,
     QuestionnaireResponse,
+    QuestionnaireScope,
     QuestionnaireVersion,
     QuestionnaireWidget,
     ResponseMapping,
@@ -98,6 +100,7 @@ REGISTER_SETTING = "QUESTIONNAIRES_REGISTER_ADMIN"
 
 #: Every model this package exposes, and the admin it exposes it with.
 REGISTRY: tuple[tuple[type[Model], type[admin.ModelAdmin]], ...] = (
+    (QuestionnaireScope, QuestionnaireScopeAdmin),
     (Questionnaire, QuestionnaireAdmin),
     (QuestionnaireVersion, QuestionnaireVersionAdmin),
     (Page, PageAdmin),
@@ -152,6 +155,10 @@ def register(
     """
     target = site or admin.site
     for model, admin_class in REGISTRY:
+        if model._meta.swapped:
+            # A project that pointed the setting at its own model has its own
+            # admin for it; the model this package ships has no table here.
+            continue
         if target.is_registered(model):
             if not force:
                 continue
@@ -165,7 +172,7 @@ def unregister(site: admin.AdminSite | None = None) -> None:
     """Take every model of this package back off *site*."""
     target = site or admin.site
     for model, _admin_class in REGISTRY:
-        if target.is_registered(model):
+        if not model._meta.swapped and target.is_registered(model):
             target.unregister(model)
 
 

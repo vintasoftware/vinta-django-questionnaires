@@ -60,6 +60,13 @@ from vinta_django_questionnaires.models.responses import (
     ResponseStatus,
     SkipReason,
 )
+from vinta_django_questionnaires.models.scopes import (
+    AbstractQuestionnaireScope,
+    QuestionnaireScope,
+    ScopedModel,
+    ScopeType,
+    get_global_scope,
+)
 from vinta_django_questionnaires.models.structure import Page, Section, SectionState
 from vinta_django_questionnaires.models.value_sets import (
     HttpMethod,
@@ -72,6 +79,7 @@ from vinta_django_questionnaires.models.widgets import QuestionnaireWidget, Widg
 __all__ = [
     "DEFAULT_COLUMN_COUNT",
     "MARKDOWN_HELP",
+    "AbstractQuestionnaireScope",
     "AcknowledgedEdit",
     "Answer",
     "BaseModel",
@@ -98,11 +106,14 @@ __all__ = [
     "QuestionValidator",
     "Questionnaire",
     "QuestionnaireResponse",
+    "QuestionnaireScope",
     "QuestionnaireVersion",
     "QuestionnaireWidget",
     "ResponseMapping",
     "ResponseStatus",
     "ResponseWebhook",
+    "ScopeType",
+    "ScopedModel",
     "Section",
     "SectionState",
     "SkipReason",
@@ -116,4 +127,5 @@ __all__ = [
     "WebhookDelivery",
     "WidgetQuestionType",
     "WindowSizeRange",
+    "get_global_scope",
 ]

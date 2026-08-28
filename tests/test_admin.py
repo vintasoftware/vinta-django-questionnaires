@@ -377,7 +377,7 @@ def test_the_response_table_shows_a_column_per_question(client, staff, answered)
     client.force_login(staff)
     url = reverse("admin:vinta_django_questionnaires_questionnaireresponse_table")
 
-    body = client.get(url, {"questionnaire": "intake"}).content.decode()
+    body = client.get(url, {"questionnaire": answered.questionnaire_id}).content.decode()
 
     assert "Favourite flavour" in body
     assert "vanilla" in body
@@ -387,7 +387,9 @@ def test_the_table_takes_the_columns_it_is_given(client, staff, answered):
     client.force_login(staff)
     url = reverse("admin:vinta_django_questionnaires_questionnaireresponse_table")
 
-    body = client.get(url, {"questionnaire": "intake", "columns": "status"}).content.decode()
+    body = client.get(
+        url, {"questionnaire": answered.questionnaire_id, "columns": "status"}
+    ).content.decode()
 
     assert "vanilla" not in body
     assert "completed" in body
@@ -397,7 +399,9 @@ def test_the_table_exports_the_same_columns(client, staff, answered):
     client.force_login(staff)
     url = reverse("admin:vinta_django_questionnaires_questionnaireresponse_export")
 
-    response = client.get(url, {"questionnaire": "intake", "columns": "status,flavour"})
+    response = client.get(
+        url, {"questionnaire": answered.questionnaire_id, "columns": "status,flavour"}
+    )
 
     assert response.status_code == 200
     assert response["Content-Type"].startswith("text/csv")

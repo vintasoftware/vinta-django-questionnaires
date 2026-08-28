@@ -17,7 +17,11 @@ from typing import TYPE_CHECKING, Any
 from django.http import StreamingHttpResponse
 from django.utils.translation import gettext_lazy as _
 
-from vinta_django_questionnaires.models import QuestionnaireVersion, ResponseStatus
+from vinta_django_questionnaires.models import (
+    QuestionnaireResponse,
+    QuestionnaireVersion,
+    ResponseStatus,
+)
 from vinta_django_questionnaires.reporting import (
     DEFAULT_PAGE_SIZE,
     MAX_PAGE_SIZE,
@@ -30,15 +34,23 @@ from vinta_django_questionnaires.reporting import (
     rows_for,
     select_columns,
 )
+from vinta_django_questionnaires.scoping import GLOBAL_SCOPE_KEY, ScopeFilter
+
+#: What the scope control writes for the installation's own scope, whose key
+#: is "" and so cannot be told from "no selection" in a query string.
+GLOBAL_CHOICE = "-"
 
 if TYPE_CHECKING:
     from django.db.models import QuerySet
     from django.http import HttpRequest
 
-    from vinta_django_questionnaires.models import QuestionnaireResponse
 
 #: The query parameter each control writes into the URL, so a filtered table is
 #: a link someone can send to a colleague.
+SCOPE = "scope"
+#: A primary key, not a key.  A questionnaire key is unique only within a
+#: scope, and this table spans every scope, so two tenants' "intake" would
+#: otherwise select as one and merge their answers under one set of columns.
 QUESTIONNAIRE = "questionnaire"
 VERSION = "version"
 STATUS = "status"
@@ -53,7 +65,11 @@ class ResponseTable:
 
     def __init__(self, request: HttpRequest) -> None:
         self.request = request
-        self.questionnaire = request.GET.get(QUESTIONNAIRE, "")
+        # Staff see every scope; this narrows what is on screen rather than
+        # deciding what may be seen.  "" is every scope, "" cannot be a tenant
+        # key, and the global scope is reached with the explicit sentinel.
+        self.scope_key = request.GET.get(SCOPE, "")
+        self.questionnaire_pk = _as_int(request.GET.get(QUESTIONNAIRE))
         self.version_number = _as_int(request.GET.get(VERSION))
         self.status = request.GET.get(STATUS, "")
         self.search = request.GET.get(SEARCH, "").strip()
@@ -75,9 +91,9 @@ class ResponseTable:
         questionnaires do not ask the same questions, so a table across all of
         them gets the metadata columns only.
         """
-        if not self.questionnaire:
+        if self.questionnaire_pk is None:
             return None
-        versions = QuestionnaireVersion.objects.filter(questionnaire__key=self.questionnaire)
+        versions = QuestionnaireVersion.objects.filter(questionnaire_id=self.questionnaire_pk)
         if self.version_number is not None:
             return versions.filter(version=self.version_number).first()
         return versions.order_by("-version").first()
@@ -86,9 +102,25 @@ class ResponseTable:
         asked = [key for key in self.request.GET.get(COLUMNS, "").split(",") if key]
         return select_columns(self.available, asked or default_columns(self.version))
 
+    @property
+    def scopes(self) -> ScopeFilter:
+        """What the scope control is asking for.
+
+        Staff may see everything, so no selection means exactly that.  Picking
+        one narrows to it, and :data:`GLOBAL_CHOICE` reaches the installation's
+        own scope, whose key is the empty string and so cannot be spelled in a
+        query parameter any other way.
+        """
+        if not self.scope_key:
+            return ScopeFilter.everything()
+        if self.scope_key == GLOBAL_CHOICE:
+            return ScopeFilter.only(GLOBAL_SCOPE_KEY)
+        return ScopeFilter.only(self.scope_key)
+
     def _queryset(self) -> QuerySet[QuestionnaireResponse]:
         return response_queryset(
-            questionnaire=self.questionnaire,
+            scopes=self.scopes,
+            questionnaire_pk=self.questionnaire_pk,
             version=self.version_number,
             status=self.status,
             search=self.search,
@@ -112,16 +144,65 @@ class ResponseTable:
         ]
 
     # -- the controls ------------------------------------------------------
+    def scopes_available(self) -> list[dict[str, Any]]:
+        """Every scope that has a response, so the control has no dead entries."""
+        from vinta_django_questionnaires.models_registry import get_scope_model
+
+        used = set(
+            QuestionnaireResponse.objects.order_by().values_list("scope_key", flat=True).distinct()
+        )
+        entries: list[dict[str, Any]] = []
+        if GLOBAL_SCOPE_KEY in used:
+            entries.append(
+                {
+                    "value": GLOBAL_CHOICE,
+                    "label": str(_("The whole installation")),
+                    "selected": self.scope_key == GLOBAL_CHOICE,
+                }
+            )
+        # The model is swappable, so it is only ever ``type[Model]`` here;
+        # the columns below are the ones ``AbstractQuestionnaireScope``
+        # guarantees whatever a project put underneath it.
+        scopes: Any = get_scope_model()._default_manager.filter(
+            scope_key__in=used - {GLOBAL_SCOPE_KEY}
+        )
+        entries.extend(
+            {
+                "value": scope.scope_key,
+                "label": str(scope),
+                "selected": scope.scope_key == self.scope_key,
+            }
+            for scope in scopes
+        )
+        return entries
+
     def questionnaires(self) -> list[dict[str, Any]]:
+        """The questionnaires to choose from, told apart by scope.
+
+        Selected by primary key rather than by key, and labelled with the scope
+        alongside, so that two tenants each having an "intake" is legible at the
+        point of choosing rather than a surprise afterwards.
+        """
         from vinta_django_questionnaires.models import Questionnaire
 
         return [
-            {"key": entry.key, "name": str(entry), "selected": entry.key == self.questionnaire}
-            for entry in Questionnaire.objects.all()
+            {
+                "key": entry.pk,
+                "name": self._questionnaire_label(entry),
+                "selected": entry.pk == self.questionnaire_pk,
+            }
+            for entry in self.scopes.apply(
+                Questionnaire.objects.select_related("scope"), field="scope__scope_key"
+            )
         ]
 
+    @staticmethod
+    def _questionnaire_label(questionnaire: Any) -> str:
+        scope = questionnaire.scope
+        return f"{questionnaire} - {scope}" if scope.scope_key else str(questionnaire)
+
     def versions(self) -> list[dict[str, Any]]:
-        if not self.questionnaire:
+        if self.questionnaire_pk is None:
             return []
         return [
             {
@@ -130,7 +211,7 @@ class ResponseTable:
                 "selected": entry.version == self.version_number,
             }
             for entry in QuestionnaireVersion.objects.filter(
-                questionnaire__key=self.questionnaire
+                questionnaire_id=self.questionnaire_pk
             ).order_by("version")
         ]
 
@@ -193,7 +274,7 @@ class ResponseTable:
 
 def export(table: ResponseTable) -> StreamingHttpResponse:
     """The table as CSV, streamed, with the columns that were on screen."""
-    name = f"{table.questionnaire}-responses.csv" if table.questionnaire else "responses.csv"
+    name = f"{table.version.questionnaire.key}-responses.csv" if table.version else "responses.csv"
     response = StreamingHttpResponse(
         csv_rows(table.queryset, table.selected), content_type="text/csv; charset=utf-8"
     )
@@ -227,4 +308,4 @@ def _as_int(value: Any) -> int | None:
         return None
 
 
-__all__ = ["ResponseTable", "export", "export_queryset"]
+__all__ = ["GLOBAL_CHOICE", "ResponseTable", "export", "export_queryset"]

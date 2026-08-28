@@ -15,13 +15,14 @@ from typing import TYPE_CHECKING, Any
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import Q
+from django.db.models import F, Q
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from vinta_django_questionnaires.models.base import BaseModel
 from vinta_django_questionnaires.models.questionnaires import QuestionnaireVersion
 from vinta_django_questionnaires.models.questions import Question
+from vinta_django_questionnaires.models.scopes import ScopedModel
 from vinta_django_questionnaires.models.structure import Page
 
 if TYPE_CHECKING:
@@ -44,8 +45,13 @@ class SkipReason(models.TextChoices):
     FALSE_CONDITION = "false_condition", _("Condition did not hold")
 
 
-class QuestionnaireResponse(BaseModel):
-    """One respondent's pass through one version of a questionnaire."""
+class QuestionnaireResponse(ScopedModel, BaseModel):
+    """One respondent's pass through one version of a questionnaire.
+
+    The scope is the response's own, not the questionnaire's: a global
+    questionnaire -- one the whole installation shares -- collects answers
+    that each belong to the tenant whose respondent gave them.
+    """
 
     uuid = models.UUIDField(_("UUID"), default=uuid.uuid4, unique=True, editable=False)
     questionnaire_version = models.ForeignKey(
@@ -70,6 +76,10 @@ class QuestionnaireResponse(BaseModel):
         db_index=True,
         help_text=_("Identifies a respondent that is not a user of this system."),
     )
+    #: The scope as a string, copied from the foreign key at insert.  This is
+    #: what every listing filters on, and what a future partition would key on:
+    #: both want a value on the row rather than one reached through a join.
+    scope_key = models.CharField(_("scope key"), max_length=255, blank=True, default="")
     status = models.CharField(
         _("status"),
         max_length=20,
@@ -91,9 +101,31 @@ class QuestionnaireResponse(BaseModel):
         verbose_name = _("questionnaire response")
         verbose_name_plural = _("questionnaire responses")
         ordering = ["-created_at", "pk"]
+        indexes = [
+            # Every scoped read of this table is "the most recent responses in
+            # one scope", so the index leads with the key and supplies the
+            # ordering.  It keys on the denormalized copy rather than the
+            # foreign key so that no join is needed to use it.
+            models.Index(F("scope_key"), F("created_at").desc(), name="response_scope_recent_idx"),
+        ]
 
     def __str__(self) -> str:
         return f"{self.questionnaire_version_id and self.questionnaire_version} / {self.uuid}"
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        """Stamp the scope, once.
+
+        A response takes the questionnaire's scope unless it was given one --
+        which is what makes a global questionnaire usable by every tenant.  The
+        ``scope_key`` copy is written on insert and never again: the scope
+        cannot move, so the copy cannot drift.
+        """
+        # See ``ScopedModel.save`` for why this is a ``getattr``.
+        if getattr(self, "scope_id", None) is None and self.questionnaire_version_id:
+            self.scope_id = self.questionnaire_version.questionnaire.scope_id
+        if self._state.adding or not self.scope_key:
+            self.scope_key = self.scope.scope_key
+        super().save(*args, **kwargs)
 
     # -- answers -----------------------------------------------------------
     @property

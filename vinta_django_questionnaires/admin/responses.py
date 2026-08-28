@@ -124,7 +124,12 @@ class QuestionnaireResponseAdmin(ReadOnlyAdmin):
         "created_at",
         "completed_at",
     )
-    list_filter = ("status", "questionnaire_version__questionnaire", "questionnaire_version")
+    list_filter = (
+        ("scope", admin.RelatedOnlyFieldListFilter),
+        "status",
+        "questionnaire_version__questionnaire",
+        "questionnaire_version",
+    )
     search_fields = ("uuid", "external_id", "respondent__username")
     date_hierarchy = "created_at"
     inlines = [PageResponseInline, AnswerInline, MappingRunInline, WebhookDeliveryInline]

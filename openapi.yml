@@ -26,6 +26,12 @@ info:
   description: |
     Two APIs over one set of models.
 
+    **Scopes.** A questionnaire and a response each belong to a scope -- a
+    tenant, a workspace, or the installation at large. A scope is set when a row
+    is created and is never changed afterwards. Keys are unique *within* a
+    scope, so two tenants may each have an `intake`, and the scope goes in the
+    URL rather than in a query string; see the `scopePath` server variable.
+
     **The response API** is what a respondent fills a questionnaire in through.
     A response is pushed a page at a time and each page is validated on its
     own; the rules come down as a *validation plan* the browser rebuilds as a
@@ -66,6 +72,28 @@ servers:
         description: >-
           The prefix in front of both modules, if they share one. The paths
           below already carry `api/questionnaires/` and `api/authoring/`.
+      scopePath:
+        default: ""
+        description: >
+          Multi-tenant installations put the tenant in the path, by mounting
+          either URL module under a prefix that captures it -- for example
+          `path("api/authoring/scopes/<slug:scope_key>/", include(...))`.
+          Django hands the capture to every view underneath, so no path below
+          changes shape, which is why this is a server variable rather than a
+          parameter repeated on every operation. Set it to `scopes/acme/` and
+          every request is that tenant's.
+
+
+          What it narrows depends on what is being read. **Responses** are
+          narrowed to that scope alone: a response always belongs to somebody,
+          so there is nothing to fall back to. **Definitions** -- questionnaires,
+          value sets, the catalog -- also include what the whole installation
+          shares, and a tenant's own entry shadows a shared one with the same
+          key.
+
+
+          Left empty, every scope is in view: what a single-tenant installation
+          wants, and what the package does by default.
 
 tags:
   - name: Responses
@@ -1376,8 +1404,20 @@ components:
       properties:
         key:
           type: string
+          description: >-
+            Unique within a scope, not across the installation. Two tenants may
+            each have an `intake`.
         name:
           type: string
+        scope:
+          type: string
+          description: >-
+            The key of the scope this questionnaire lives in; empty for one the
+            whole installation shares. Sent so a client never has to work out
+            which of two same-keyed questionnaires it is looking at.
+        isGlobal:
+          type: boolean
+          description: Whether this is the installation's rather than a tenant's.
         isActive:
           type: boolean
         versions:

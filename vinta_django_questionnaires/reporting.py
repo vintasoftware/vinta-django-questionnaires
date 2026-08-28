@@ -26,6 +26,7 @@ from vinta_django_questionnaires.models import (
     PageResponseStatus,
     QuestionnaireResponse,
 )
+from vinta_django_questionnaires.scoping import ScopeFilter
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Sequence
@@ -120,15 +121,33 @@ def default_columns(version: QuestionnaireVersion | None, *, answers: int = 8) -
 
 def response_queryset(
     *,
+    scopes: ScopeFilter,
     questionnaire: str = "",
+    questionnaire_pk: Any = None,
     version: int | None = None,
     status: str = "",
     search: str = "",
 ) -> QuerySet[QuestionnaireResponse]:
-    """The responses matching a filter, newest first."""
+    """The responses matching a filter, newest first.
+
+    *scopes* has no default on purpose.  Every caller has to say which tenants
+    it means, and an installation with one tenant says
+    ``ScopeFilter.everything()`` -- which is a sentence somebody wrote, not a
+    boundary that quietly was not there.
+
+    *questionnaire* selects by key, which is unique only **within** a scope, so
+    it means one questionnaire only when *scopes* names one.  *questionnaire_pk*
+    selects one regardless, and is what a cross-scope reader like the admin
+    should use.
+    """
     queryset = QuestionnaireResponse.objects.select_related(
         "questionnaire_version__questionnaire", "respondent"
     ).prefetch_related("page_responses", "questionnaire_version__pages")
+    # The response carries its own copy of the key, so this is one indexed
+    # predicate on the row rather than a join out to the scope table.
+    queryset = scopes.apply(queryset, field="scope_key")
+    if questionnaire_pk is not None:
+        queryset = queryset.filter(questionnaire_version__questionnaire_id=questionnaire_pk)
     if questionnaire:
         queryset = queryset.filter(questionnaire_version__questionnaire__key=questionnaire)
     if version is not None:
@@ -279,6 +298,7 @@ __all__ = [
     "MAX_PAGE_SIZE",
     "META_COLUMNS",
     "Column",
+    "ScopeFilter",
     "answer_columns",
     "as_cell",
     "columns_for",

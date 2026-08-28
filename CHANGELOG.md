@@ -7,6 +7,49 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Multi-tenant scopes.** A questionnaire and a response each belong to a
+  scope -- a tenant, a workspace, or the installation at large -- through a
+  swappable model, the `AUTH_USER_MODEL` way. Point
+  `QUESTIONNAIRES_SCOPE_MODEL` at your own subclass of
+  `AbstractQuestionnaireScope`; leave it alone and everything lands in one
+  global scope, exactly as before.
+- A scope is set when a row is created and **never changed**, which is enforced
+  rather than documented. That is what makes the `scope_key` copied onto each
+  response safe: it cannot drift from the foreign key beside it.
+- `ScopeFilter`, and a required `scopes` argument on `response_queryset()`.
+- Scope-aware URLs. Mount either URL module under a prefix that captures a
+  `scope_key` and Django hands it to every view underneath; the package picks
+  no URL shape of its own, and an installation that mounts them unprefixed
+  behaves as it always did.
+- A scope filter in the admin's response table, and `scope` on the ordinary
+  changelists. Staff still see every scope -- the control narrows what is on
+  screen rather than deciding what may be seen.
+- An optional scope on `ResponseMapping` and `ResponseWebhook`, so a shared
+  questionnaire can reach a different endpoint per tenant, and `scope` in the
+  expression document so a URL template can say `{scope}`.
+- A second test run, `pytest tests/scoped --ds=tests.settings_scoped`, against a
+  scope model the package does not own. `Meta.swappable` resolves once per
+  process, so this cannot be an `override_settings`.
+
+### Changed
+
+- **Breaking.** `response_queryset()` requires a `scopes` keyword argument. A
+  boundary that defaults to open is the failure this exists to prevent, so a
+  single-tenant installation writes `ScopeFilter.everything()` at the call site.
+- **Breaking.** `Questionnaire.key` and `ValueSet.key` are unique per scope
+  rather than across the installation, so two tenants may each have an
+  `intake`. Existing rows migrate into one global scope, where the old
+  uniqueness still holds, so the migration cannot fail on duplicates.
+- **Breaking.** The admin response table's `questionnaire` filter takes a
+  primary key rather than a key. Staff span every scope and keys are no longer
+  unique across them, so two tenants' `intake` would otherwise select as one
+  and merge their answers under a single set of columns.
+- The authoring API's questionnaire listing now sends `scope` and `isGlobal`
+  alongside each entry, so a client never has to work out which of two
+  same-keyed questionnaires it is looking at.
+
 ### Fixed
 
 - The release workflow uploaded the signed artifacts to the release twice: the
