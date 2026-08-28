@@ -7,6 +7,18 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+
+## [0.2.0] - 2026-08-27
+
+Multi-tenancy. A questionnaire and a response each belong to a **scope** -- a
+tenant, a workspace, or the installation at large -- through a swappable model.
+Nothing is required: without configuration everything lands in one global scope
+and behaves as it did before.
+
+Three breaking changes, all listed below. The migration into this release cannot
+fail on existing data: every row moves into one global scope, where the
+uniqueness that held before still holds.
+
 ### Added
 
 - **Multi-tenant scopes.** A questionnaire and a response each belong to a
@@ -248,5 +260,6 @@ step. Everything below is the npm package or the release plumbing.
   submission layer and reported to the client as a `policy` block on every
   response payload.
 
+[0.2.0]: https://github.com/vintasoftware/vinta-django-questionnaires/releases/tag/v0.2.0
 [0.1.1]: https://github.com/vintasoftware/vinta-django-questionnaires/releases/tag/v0.1.1
 [0.1.0]: https://github.com/vintasoftware/vinta-django-questionnaires/releases/tag/v0.1.0
