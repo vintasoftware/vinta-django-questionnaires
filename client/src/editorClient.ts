@@ -57,8 +57,16 @@ export interface AuthoredVersion {
 }
 
 export interface AuthoredQuestionnaire {
+  /** Unique within a scope, not across the installation. */
   key: string
   name: string
+  /**
+   * The scope this questionnaire lives in, empty for one the whole
+   * installation shares. Sent by the server so a client never has to work out
+   * which of two same-keyed questionnaires it is looking at.
+   */
+  scope?: string
+  isGlobal?: boolean
   isActive: boolean
   versions: AuthoredVersion[]
 }

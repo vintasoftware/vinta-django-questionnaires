@@ -589,6 +589,124 @@ something else, and set `QUESTIONNAIRES_RUN_INTEGRATIONS = False` to stop the
 submission layer running them inline and call `run_integrations()` from a task
 queue instead.
 
+### Multi-tenancy
+
+A questionnaire and a response each belong to a **scope** -- a tenant, a
+workspace, an account, or the installation at large. Nothing here is required:
+without configuration everything lands in one global scope and behaves exactly
+as it did before.
+
+A scope is **set when a row is created and never changed**. That is enforced
+rather than documented, and it is what makes the `scope_key` copied onto each
+response safe to filter on without a join.
+
+#### Pointing the scope at your own model
+
+```python
+# settings.py -- a top-level setting, because Meta.swappable resolves against one
+QUESTIONNAIRES_SCOPE_MODEL = "myproject.OrganizationScope"
+```
+
+```python
+from django.db import models
+from vinta_django_questionnaires.models import AbstractQuestionnaireScope, ScopeType
+
+
+class OrganizationScope(AbstractQuestionnaireScope[Organization]):
+    organization = models.ForeignKey(Organization, null=True, blank=True, on_delete=models.PROTECT)
+
+    class Meta:
+        swappable = "QUESTIONNAIRES_SCOPE_MODEL"
+
+    @property
+    def scope(self):
+        return self.organization
+
+    @scope.setter
+    def scope(self, value):
+        self.organization = value
+        self.scope_type = ScopeType.GLOBAL if value is None else ScopeType.SCOPED
+
+    def build_scope_key(self) -> str:
+        # A primary key, not a slug: this has to be stable for the life of the
+        # scope, because responses are found by it.
+        return "" if self.organization_id is None else str(self.organization_id)
+```
+
+`PROTECT`, not `CASCADE`: deleting a tenant must not delete the answers
+collected inside it.
+
+#### Two shapes, both supported
+
+A questionnaire may belong to a tenant, or to the installation at large. Both
+are real, and the difference is where the answers go:
+
+| | Questionnaire's scope | Response's scope |
+| --- | --- | --- |
+| Tenants author their own | the tenant | the tenant |
+| The platform authors, tenants answer | global | the answering tenant |
+
+`start_response(version, scope=...)` is what makes the second work: the
+definition stays shared while each response belongs to whoever gave it.
+
+Keys are unique **within** a scope, so two tenants may each have an `intake`.
+A tenant's own entry shadows a shared one with the same key.
+
+#### The scope goes in the URL
+
+Mount either URL module under a prefix that captures it, and Django hands the
+capture to every view underneath:
+
+```python
+path(
+    "api/authoring/scopes/<slug:scope_key>/",
+    include("vinta_django_questionnaires.editor_urls"),
+)
+```
+
+The client is `baseUrl`-driven, so it comes along unchanged: point it at
+`/api/authoring/scopes/acme/`.
+
+This is authorization, and it is deliberately not the same thing as filtering.
+`AuthoringAccessMixin.check_scope_access` is the one place that decides whether
+a request may have the scope it named -- open by default, because reaching it
+already means `check_access` passed, and that defaults to staff. Override both
+if a tenant's own people author their own questionnaires.
+
+#### Reading responses
+
+Every function that builds a queryset over responses takes a `ScopeFilter`, and
+takes it as a **required** keyword argument:
+
+```python
+from vinta_django_questionnaires.reporting import response_queryset
+from vinta_django_questionnaires.scoping import ScopeFilter
+
+response_queryset(scopes=ScopeFilter.only("acme"))  # one tenant's
+response_queryset(scopes=ScopeFilter.everything())  # every tenant's
+```
+
+There is no default. A boundary that defaults to open is the failure this
+exists to prevent, so a single-tenant installation writes
+`ScopeFilter.everything()` at the call site, where it can be read and grepped
+for.
+
+#### In the admin
+
+Staff see every scope -- the admin is `is_staff`-gated already, and staff are
+the people running the installation. The scope control there narrows what is on
+screen rather than deciding what may be seen. Note that the response table's
+questionnaire filter takes a **primary key**, not a key: keys are no longer
+unique across scopes, and two tenants' `intake` must not select as one.
+
+#### Per-tenant integrations
+
+`ResponseMapping` and `ResponseWebhook` take an optional scope. Left empty they
+run for every scope; set, they run only for responses belonging to it -- which
+is what a shared questionnaire needs, since one webhook with one URL firing for
+every tenant is rarely what anybody meant. The scope is in the expression
+document too, so a URL template can say `{scope}`.
+
 ### The API, written down
 
 [`openapi.yml`](openapi.yml) describes both URL modules -- every path, method,
@@ -627,6 +745,7 @@ Useful commands:
 | Command | What it does |
 | --- | --- |
 | `uv run pytest` | Run the test suite on the current interpreter |
+| `uv run pytest tests/scoped --ds=tests.settings_scoped` | The swapped-scope-model run |
 | `uv run tox` | Run it on every supported Python and Django |
 | `uv run tox -e lint` | Check formatting and lint rules |
 | `uv run tox -e types` | Type check with mypy and django-stubs |
@@ -639,6 +758,10 @@ Useful commands:
 Both `shared/` artifacts are checked into the repository and asserted to be
 current by the test suite: adding or changing a validator means regenerating
 them in the same commit.
+
+The scope model is swappable, and `Meta.swappable` resolves once per process, so
+the swapped configuration is its own settings module and its own pytest run
+rather than an `override_settings`. `uv run tox` runs both.
 
 ## Releasing
 
