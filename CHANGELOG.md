@@ -7,6 +7,22 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **The editor's stacked fields were 192px tall whatever they contained.**
+  `.vqe-field` carried `flex: 1 1 12rem`, which is right for a field inside a
+  `.vqe-row` -- there 12rem is the width to wrap at -- but the forms also put
+  fields directly inside `.vqe-form`, which is a column, and a flex basis along
+  a column axis is a *height*. Every stacked field got a 12rem base height: the
+  page form's condition field rendered 85px of content in a 192px box, more
+  dead space than content, and the form ran to 769px instead of 543px. The
+  basis now applies only inside a row.
+- **A row's inputs did not line up.** `.vqe-row` aligned its fields at
+  `flex-end`, so a field carrying a hint and one without it were matched at
+  their bottoms, putting the unhinted field's input 27px below its neighbour's.
+  Rows align at the start now: the inputs line up and the hints hang below
+  them.
+
 
 ## [0.2.0] - 2026-08-27
 
