@@ -322,6 +322,15 @@
   flex-direction: column;
   gap: 0.25rem;
   min-width: 0;
+  /* Sized by its content. The 12rem basis below is a *width* to wrap at, and
+     only means that inside a `.vqe-row`; the forms also put fields directly
+     into `.vqe-form`, which is a column, where a basis is a height instead. */
+  flex: 0 1 auto;
+}
+
+/* Inside a row, fields share the width and wrap when they can no longer be
+   12rem wide. */
+.vqe-row > .vqe-field {
   flex: 1 1 12rem;
 }
 
@@ -329,6 +338,12 @@
   flex-direction: row;
   align-items: flex-start;
   gap: 0.5rem;
+  flex-basis: auto;
+}
+
+/* An inline field takes a row to itself: a checkbox and its label read as one
+   line, and pairing it with a text field beside it does not. */
+.vqe-row > .vqe-field--inline {
   flex-basis: 100%;
 }
 
@@ -376,7 +391,11 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--vqe-gap);
-  align-items: flex-end;
+  /* Start, not end: a field carrying a hint is taller than one without, and
+     matching their bottoms pushes the unhinted field's input below its
+     neighbour's. The inputs are what the eye tracks across a row, so they are
+     what has to line up; the hints hang off the bottom. */
+  align-items: flex-start;
 }
 
 .vqe-fieldset {
