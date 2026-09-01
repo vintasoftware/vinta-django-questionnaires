@@ -7,6 +7,14 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+
+## [0.2.2] - 2026-08-31
+
+The editor's outline rail now reaches the bottom of the page. Splitting the
+pinned element out from the one that paints the column is what makes both hold
+at once, and it adds one `div` inside `nav.vqe-outline` -- the only thing here
+a project styling the editor itself might notice.
+
 ### Fixed
 
 - **The editor's outline rail stopped partway down the page.** The rail was the
@@ -303,6 +311,7 @@ step. Everything below is the npm package or the release plumbing.
   submission layer and reported to the client as a `policy` block on every
   response payload.
 
+[0.2.2]: https://github.com/vintasoftware/vinta-django-questionnaires/releases/tag/v0.2.2
 [0.2.1]: https://github.com/vintasoftware/vinta-django-questionnaires/releases/tag/v0.2.1
 [0.2.0]: https://github.com/vintasoftware/vinta-django-questionnaires/releases/tag/v0.2.0
 [0.1.1]: https://github.com/vintasoftware/vinta-django-questionnaires/releases/tag/v0.1.1
