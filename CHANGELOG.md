@@ -7,6 +7,25 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **The editor's outline rail stopped partway down the page.** The rail was the
+  element being pinned, so it could only be as tall as the tree inside it --
+  against a long inspector its surface and its right-hand border ended early
+  and the rest of the column fell back to the page's own background, which read
+  as a panel someone had forgotten to finish. On a version form it covered
+  203px of an 1109px column.
+
+  The rail and the thing that sticks are now two elements: `.vqe-outline`
+  fills the grid row and paints it, and a new `.vqe-outline__pane` inside it is
+  what stays level while the page scrolls. Both properties hold at once, which
+  neither could alone -- something pinned needs room to move inside its
+  container, and a full-height element leaves none.
+
+  This adds one `div` inside `nav.vqe-outline`. A project styling the editor
+  through its own stylesheet keeps working; one that had targeted
+  `.vqe-outline > *` directly would need `.vqe-outline__pane > *`.
+
 
 ## [0.2.1] - 2026-08-31
 
