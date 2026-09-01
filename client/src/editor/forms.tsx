@@ -592,14 +592,20 @@ function ChoiceList({
       <Errors errors={issuesAt(issues, base).choices} />
       <SortableList
         label="choices"
-        ids={question.choices.map((choice, index) => `${choice.axis}:${choice.value}:${index}`)}
+        // Positional, so that editing a choice does not change the row's
+        // identity: an id derived from the value would remount the row on
+        // every keystroke and take the focus out of the field being typed in.
+        ids={question.choices.map((_choice, index) => `choice-${index}`)}
+        names={question.choices.map(
+          (choice) => choice.label || choice.value || "a blank choice",
+        )}
         onReorder={(from, to) =>
           dispatch({ type: "reorderItem", path, list: "choices", from, to })
         }
       >
         {question.choices.map((choice, index) => {
           const errors = issuesAt(issues, `${base}.choices.${index}`)
-          const id = `${choice.axis}:${choice.value}:${index}`
+          const id = `choice-${index}`
           return (
             <SortableItem key={id} id={id}>
               {(handle) => (
@@ -714,16 +720,14 @@ function ValidatorList({
       </p>
       <SortableList
         label="validators"
-        ids={question.validators.map((binding, index) => `${binding.validator}:${index}`)}
+        ids={question.validators.map((_binding, index) => `validator-${index}`)}
+        names={question.validators.map((binding) => binding.validator)}
         onReorder={(from, to) =>
           dispatch({ type: "reorderItem", path, list: "validators", from, to })
         }
       >
         {question.validators.map((binding, index) => (
-          <SortableItem
-            key={`${binding.validator}:${index}`}
-            id={`${binding.validator}:${index}`}
-          >
+          <SortableItem key={`validator-${index}`} id={`validator-${index}`}>
             {(handle) => (
               <ValidatorRow
                 handle={handle}

@@ -58,14 +58,15 @@ export function Outline({ document, selection, issues, dispatch }: OutlineProps)
 
         <SortableList
           label="pages"
-          ids={document.pages.map((page, index) => page.key || `page-${index}`)}
+          ids={document.pages.map((_page, index) => `page-${index}`)}
+          names={document.pages.map((page) => page.title || page.key || "untitled page")}
           onReorder={reorder(null)}
         >
           <ol className="vqe-outline__list">
             {document.pages.map((page, pageIndex) => {
               const pagePath = { page: pageIndex }
               return (
-                <SortableItem key={page.key || pageIndex} id={page.key || `page-${pageIndex}`}>
+                <SortableItem key={`page-${pageIndex}`} id={`page-${pageIndex}`}>
                   {(handle) => (
                     <li>
                       <Row
@@ -88,8 +89,9 @@ export function Outline({ document, selection, issues, dispatch }: OutlineProps)
                       />
                       <SortableList
                         label="sections"
-                        ids={page.sections.map(
-                          (section, index) => section.key || `section-${index}`,
+                        ids={page.sections.map((_section, index) => `section-${index}`)}
+                        names={page.sections.map(
+                          (section) => section.title || section.key || "untitled section",
                         )}
                         onReorder={reorder(pagePath)}
                       >
@@ -101,8 +103,8 @@ export function Outline({ document, selection, issues, dispatch }: OutlineProps)
                             }
                             return (
                               <SortableItem
-                                key={section.key || sectionIndex}
-                                id={section.key || `section-${sectionIndex}`}
+                                key={`section-${sectionIndex}`}
+                                id={`section-${sectionIndex}`}
                               >
                                 {(sectionHandle) => (
                                   <li>
@@ -132,7 +134,11 @@ export function Outline({ document, selection, issues, dispatch }: OutlineProps)
                                     <SortableList
                                       label="questions"
                                       ids={section.questions.map(
-                                        (question, index) => question.key || `question-${index}`,
+                                        (_question, index) => `question-${index}`,
+                                      )}
+                                      names={section.questions.map(
+                                        (question) =>
+                                          question.title || question.key || "untitled question",
                                       )}
                                       onReorder={reorder(sectionPath)}
                                     >
@@ -145,8 +151,8 @@ export function Outline({ document, selection, issues, dispatch }: OutlineProps)
                                           }
                                           return (
                                             <SortableItem
-                                              key={question.key || questionIndex}
-                                              id={question.key || `question-${questionIndex}`}
+                                              key={`question-${questionIndex}`}
+                                              id={`question-${questionIndex}`}
                                             >
                                               {(questionHandle) => (
                                                 <li>

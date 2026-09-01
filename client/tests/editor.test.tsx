@@ -98,8 +98,19 @@ const catalog: EditorCatalog = {
       requiresItemType: false,
       requiresSubQuestionnaire: false,
     },
+    {
+      key: "single_option",
+      label: "Single option",
+      answerShape: "scalar",
+      supportsChoices: true,
+      supportsValueSet: true,
+      supportsOtherOption: true,
+      usesMatrixAxes: false,
+      requiresItemType: false,
+      requiresSubQuestionnaire: false,
+    },
   ],
-  scalarQuestionTypes: ["free_text"],
+  scalarQuestionTypes: ["free_text", "single_option"],
   validators: [
     {
       key: "min_length",
@@ -136,6 +147,24 @@ function fakeApi(overrides: Partial<EditorApi> = {}, initial = document()): Edit
   }
 }
 
+/** The same document, with a question that carries choices of its own. */
+function withChoices(): QuestionnaireDefinition {
+  const base = document()
+  const question = base.pages[0]!.sections[0]!.questions[0]!
+  base.pages[0]!.sections[0]!.questions.push({
+    ...question,
+    key: "flavour",
+    title: "Pick one",
+    questionType: "single_option",
+    validators: [],
+    choices: [
+      { axis: "option", value: "y", label: "Yes", isActive: true, extra: {} },
+      { axis: "option", value: "n", label: "No", isActive: true, extra: {} },
+    ],
+  })
+  return base
+}
+
 async function open(api: EditorApi) {
   render(<QuestionnaireEditor api={api} questionnaire="intake" version={1} />)
   await screen.findByText("About")
@@ -168,6 +197,36 @@ describe("the editor", () => {
     expect(screen.getByLabelText("Question type")).toBeTruthy()
     // The validator's params are rendered from its own schema, not hard-coded.
     expect((screen.getByLabelText("Minimum *") as HTMLInputElement).value).toBe("2")
+  })
+
+  it("keeps the focus in a choice's value field while it is typed in", async () => {
+    // The row's identity has to survive an edit to the field being typed in:
+    // when it did not, every keystroke remounted the row and the field lost
+    // the focus, so only one character could be typed at a time.
+    await open(fakeApi({}, withChoices()))
+
+    fireEvent.click(screen.getByText("Pick one"))
+    const field = screen.getAllByLabelText("Value")[0] as HTMLInputElement
+    field.focus()
+    fireEvent.change(field, { target: { value: "ye" } })
+
+    const after = screen.getAllByLabelText("Value")[0] as HTMLInputElement
+    expect(after.value).toBe("ye")
+    expect(globalThis.document.activeElement).toBe(after)
+  })
+
+  it("keeps an outline row through a rename of the key it is drawn from", async () => {
+    // The rows used to be identified by the key they show, so renaming one
+    // rebuilt its row from scratch -- which drops whatever was focused inside
+    // it, the same way it dropped the focus out of a choice being typed in.
+    await open(fakeApi())
+
+    fireEvent.click(screen.getByText("Your name"))
+    const row = screen.getByText("Your name")
+    fireEvent.change(screen.getByLabelText("Key"), { target: { value: "full-name" } })
+
+    expect(screen.getByText("Your name")).toBe(row)
+    expect((screen.getByLabelText("Key") as HTMLInputElement).value).toBe("full-name")
   })
 
   it("does not offer choices to a type that does not take them", async () => {
