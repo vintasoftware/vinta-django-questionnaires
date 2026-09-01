@@ -127,7 +127,9 @@
 .vqe__body {
   display: grid;
   grid-template-columns: minmax(200px, 300px) minmax(0, 1fr);
-  align-items: start;
+  /* Stretch, so the outline rail is as tall as the inspector beside it. What
+     stays level while the page scrolls is `.vqe-outline__pane` inside it. */
+  align-items: stretch;
   min-height: 0;
 }
 
@@ -144,12 +146,22 @@
 
 /* ------------------------------------------------------------- the outline */
 
+/* The rail itself: it fills the grid row, so its surface and its right-hand
+   border run the whole height of the inspector beside it rather than stopping
+   wherever the tree happens to end. */
 .vqe-outline {
-  padding: 0.75rem;
   border-right: 1px solid var(--vqe-border);
   background: var(--vqe-surface-sunken);
-  /* A long questionnaire makes for a long inspector; the outline stays put and
-     scrolls on its own rather than stretching to match it. */
+  min-width: 0;
+}
+
+/* What is actually pinned. A long questionnaire makes for a long inspector, and
+   the tree stays put and scrolls on its own rather than sliding away up the
+   page. It has to be a separate element from the rail: something sticky needs
+   room to move inside its container, which a full-height rail would not leave
+   it. */
+.vqe-outline__pane {
+  padding: 0.75rem;
   position: sticky;
   top: 0;
   max-height: 100vh;
@@ -158,10 +170,15 @@
 
 @media (max-width: 720px) {
   .vqe-outline {
-    position: static;
-    max-height: none;
     border-right: 0;
     border-bottom: 1px solid var(--vqe-border);
+  }
+
+  /* One column, so the tree sits above the inspector rather than beside it and
+     there is nothing to stay level with. */
+  .vqe-outline__pane {
+    position: static;
+    max-height: none;
   }
 }
 
