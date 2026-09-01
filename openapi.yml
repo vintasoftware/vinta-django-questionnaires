@@ -21,7 +21,7 @@ openapi: 3.1.0
 
 info:
   title: Vinta Django Questionnaires
-  version: "0.2.2"
+  version: "0.2.3"
   summary: Versioned questionnaires, the responses given to them, and the API that authors both.
   description: |
     Two APIs over one set of models.

@@ -8,6 +8,43 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 
+## [0.2.3] - 2026-09-01
+
+A choice's value field in the editor could only be typed in one character at a
+time. The rows of every sortable list were named after the fields they show, so
+editing one rebuilt its row. Three files under `client/src/editor` changed, and
+nothing in either package's API moved; the Python package goes with the npm
+one, as the two always do.
+
+### Fixed
+
+- **Typing in a choice's value field blurred it after every character.** The
+  row's dnd-kit id, which is its React key as well, was built out of the choice
+  itself -- its axis, its value and its index. A keystroke changed the value,
+  so it changed the key, so React unmounted the row and mounted a new one, and
+  the input the character had been typed into was no longer the input on the
+  page. The focus left with the element that left, and editing a value meant
+  clicking back into the field for each letter.
+
+  Rows are identified by their position now, which is what reordering already
+  assumed: `SortableList` maps an id back to an index to dispatch the move.
+- **The other sortable lists were named the same way.** The validator chain was
+  keyed by the chosen validator, and the outline's pages, sections and
+  questions by the key each row shows. None of them could blur a field -- the
+  outline's rows are buttons, and changing a validator resets that row's fields
+  anyway -- but all of them rebuilt a row whenever the value it was named after
+  changed, and two sections in one page sharing a key handed a single
+  `SortableContext` two rows with one id between them.
+
+### Changed
+
+- **A drag announces the item's name rather than its id.** Positional ids would
+  otherwise have read "Picked up page-0 in pages" to anyone listening, so
+  `SortableList` takes an optional `names` alongside `ids`. The choices list
+  comes out ahead of where it started: it used to announce "Picked up
+  option:yes:1 in choices" and says "Picked up Yes in choices" now.
+
+
 ## [0.2.2] - 2026-08-31
 
 The editor's outline rail now reaches the bottom of the page. Splitting the
@@ -311,6 +348,7 @@ step. Everything below is the npm package or the release plumbing.
   submission layer and reported to the client as a `policy` block on every
   response payload.
 
+[0.2.3]: https://github.com/vintasoftware/vinta-django-questionnaires/releases/tag/v0.2.3
 [0.2.2]: https://github.com/vintasoftware/vinta-django-questionnaires/releases/tag/v0.2.2
 [0.2.1]: https://github.com/vintasoftware/vinta-django-questionnaires/releases/tag/v0.2.1
 [0.2.0]: https://github.com/vintasoftware/vinta-django-questionnaires/releases/tag/v0.2.0
