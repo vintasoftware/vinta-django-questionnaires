@@ -8,6 +8,70 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 
+## [0.3.0] - 2026-09-01
+
+Both halves can be translated now. The Django app already said everything
+through `gettext_lazy` and only wanted somewhere to keep a catalogue; the React
+editor said everything in English literals and now says it through one of its
+own, which a host replaces without the package taking on an i18n dependency of
+its own. Nothing in either package's existing API moved.
+
+### Added
+
+- **The React editor can be translated.** Every word it says now comes from a
+  catalogue in `client/src/strings.ts`, and a host replaces as much of it as it
+  likes through a `strings` prop on `QuestionnaireEditor` -- or on any
+  component the package exports, since each takes one of its own. The package
+  gains no i18n dependency for this: which library to use belongs to the
+  project installing it, not to the library it installs.
+
+  Whatever a catalogue leaves out stays English, so it can be filled in over
+  time.
+
+  141 of the 163 entries are a plain string, because their sentence stands on
+  its own. The other 22 are functions, taking what the editor only knows as it
+  renders. There is no template syntax between the two -- no placeholder to
+  spell right, nothing substituted at run time -- and nothing to remember about
+  which key is which, because the type says so: the compiler asks for a string
+  where a key is a string, a function where it is a function, and exactly that
+  function's parameters, by name and with their real types.
+
+  The functions are what let a host use the i18n library it already has. Their
+  parameters are only known as the editor renders, so a finished string could
+  never reach a `t()` carrying them; a function can, and hands the whole
+  sentence -- interpolation, plurals, gender -- to react-i18next, FormatJS or
+  whatever else is in the project. Plurals are that library's problem, then,
+  and it has real rules for them.
+
+  Because the exported pieces can be composed without `QuestionnaireEditor`
+  around them, the catalogue rides a React context.
+  `QuestionnaireStringsProvider` is exported for that, and a component's own
+  `strings` prop wins over it. `defaultStrings`, `resolveStrings`, `translate`
+  and `translator` are exported from the package root and have no React in
+  them.
+
+  Not in the catalogue: the messages a respondent sees when an answer fails,
+  which are templates the server sends down in the plan and Django already
+  translates; and diagnostics and thrown `Error`s, which go to consoles and
+  error trackers where a stable English string is worth more.
+
+- **The Django app has somewhere to put its translations.**
+  `vinta_django_questionnaires/locale/`, and a `README.md` beside it with the
+  extraction workflow. Every string the server says was already wrapped in
+  `gettext_lazy`; `makemessages` extracts 513 of them. No catalogue ships yet.
+
+### Changed
+
+- `validateDefinition` and `summariseIssues` take an optional string
+  catalogue, and the `insert` action carries the title the new node is given.
+  The reducer is pure and has no catalogue of its own to reach for, so a
+  translated editor sends the word down with the action. Both are backwards
+  compatible: without them the wording is what it was.
+- The grip in the admin's structure editor takes its accessible label from the
+  template rather than from a fallback inside `admin.js`, which is served as a
+  static asset and so is somewhere a translation cannot reach.
+
+
 ## [0.2.3] - 2026-09-01
 
 A choice's value field in the editor could only be typed in one character at a
@@ -348,6 +412,7 @@ step. Everything below is the npm package or the release plumbing.
   submission layer and reported to the client as a `policy` block on every
   response payload.
 
+[0.3.0]: https://github.com/vintasoftware/vinta-django-questionnaires/releases/tag/v0.3.0
 [0.2.3]: https://github.com/vintasoftware/vinta-django-questionnaires/releases/tag/v0.2.3
 [0.2.2]: https://github.com/vintasoftware/vinta-django-questionnaires/releases/tag/v0.2.2
 [0.2.1]: https://github.com/vintasoftware/vinta-django-questionnaires/releases/tag/v0.2.1
