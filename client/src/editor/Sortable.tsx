@@ -29,7 +29,10 @@ import {
 import { CSS } from "@dnd-kit/utilities"
 import type { ReactNode } from "react"
 
-export interface SortableListProps {
+import { useStrings, type WithStrings } from "./strings.js"
+import type { Translate } from "../strings.js"
+
+export interface SortableListProps extends WithStrings {
   /**
    * One per item, stable across renders and unique within this list. Derive
    * them from the item's position, not from its editable content: these ids
@@ -49,7 +52,15 @@ export interface SortableListProps {
   label?: string
 }
 
-export function SortableList({ ids, names, onReorder, children, label }: SortableListProps) {
+export function SortableList({
+  ids,
+  names,
+  onReorder,
+  children,
+  label,
+  strings,
+}: SortableListProps) {
+  const t = useStrings(strings)
   const sensors = useSensors(
     // A few pixels of travel before a drag starts, so clicking a row to select
     // it does not turn into a drag.
@@ -79,7 +90,7 @@ export function SortableList({ ids, names, onReorder, children, label }: Sortabl
       collisionDetection={closestCenter}
       modifiers={[restrictToVerticalAxis, restrictToParentElement]}
       onDragEnd={handleEnd}
-      accessibility={label ? { announcements: announcementsFor(label, nameOf) } : undefined}
+      accessibility={label ? { announcements: announcementsFor(label, nameOf, t) } : undefined}
     >
       <SortableContext items={ids} strategy={verticalListSortingStrategy}>
         {children}
@@ -128,13 +139,18 @@ export function SortableItem({ id, children, className }: SortableItemProps) {
 }
 
 /** The grip. Everything draggable gets one, and nothing else drags. */
-export function DragHandle({ handle, label }: { handle: HandleProps; label: string }) {
+export function DragHandle({
+  handle,
+  label,
+  strings,
+}: WithStrings & { handle: HandleProps; label: string }) {
+  const t = useStrings(strings)
   return (
     <button
       type="button"
       className="vqe-handle"
-      aria-label={`Reorder ${label}`}
-      title={`Drag to reorder ${label}`}
+      aria-label={t("sortable.reorder", { name: label })}
+      title={t("sortable.dragToReorder", { name: label })}
       {...handle.attributes}
       {...handle.listeners}
     >
@@ -143,14 +159,18 @@ export function DragHandle({ handle, label }: { handle: HandleProps; label: stri
   )
 }
 
-function announcementsFor(label: string, nameOf: (id: string | number) => string) {
+function announcementsFor(
+  label: string,
+  nameOf: (id: string | number) => string,
+  t: Translate,
+) {
   return {
     onDragStart: ({ active }: { active: { id: string | number } }) =>
-      `Picked up ${nameOf(active.id)} in ${label}. Use the arrow keys to move it, space to drop it.`,
+      t("sortable.pickedUp", { name: nameOf(active.id), list: label }),
     onDragOver: () => undefined,
     onDragEnd: ({ active }: { active: { id: string | number } }) =>
-      `Dropped ${nameOf(active.id)}.`,
+      t("sortable.dropped", { name: nameOf(active.id) }),
     onDragCancel: ({ active }: { active: { id: string | number } }) =>
-      `Left ${nameOf(active.id)} where it was.`,
+      t("sortable.cancelled", { name: nameOf(active.id) }),
   }
 }

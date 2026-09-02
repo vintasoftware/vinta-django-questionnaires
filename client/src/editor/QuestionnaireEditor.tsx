@@ -15,6 +15,9 @@
  * It is one component over `useQuestionnaireEditor`, and everything it renders
  * carries a `vqe-` class name -- so a project can restyle it entirely from its
  * own stylesheet, or skip it and build its own interface on the hook.
+ *
+ * Every word it says comes from `strings`, so a project translates it by
+ * passing a catalogue rather than by forking the component.
  */
 
 import { useState } from "react"
@@ -25,9 +28,15 @@ import type { QuestionnaireDefinition } from "../definition.js"
 import { Outline } from "./Outline.js"
 import { PageForm, QuestionForm, SectionForm, VersionForm } from "./forms.js"
 import { Button, Checkbox, TextInput } from "./fields.js"
+import {
+  QuestionnaireStringsProvider,
+  useStringCatalog,
+  useStrings,
+  type WithStrings,
+} from "./strings.js"
 import { useQuestionnaireEditor } from "./useQuestionnaireEditor.js"
 
-export interface QuestionnaireEditorProps {
+export interface QuestionnaireEditorProps extends WithStrings {
   api: EditorApi
   questionnaire: string
   version: number
@@ -40,15 +49,27 @@ export interface QuestionnaireEditorProps {
 }
 
 export function QuestionnaireEditor(props: QuestionnaireEditorProps) {
+  // The provider wraps the whole subtree, so the outline and the forms are
+  // translated by the same catalogue without being handed it one by one.
+  return (
+    <QuestionnaireStringsProvider strings={props.strings}>
+      <Editor {...props} />
+    </QuestionnaireStringsProvider>
+  )
+}
+
+function Editor(props: QuestionnaireEditorProps) {
   const editor = useQuestionnaireEditor(props)
   const { state, dispatch, issues } = editor
+  const t = useStrings()
+  const strings = useStringCatalog()
   const [reason, setReason] = useState("")
   const [understood, setUnderstood] = useState(false)
 
   if (editor.isLoading) {
     return (
       <div className="vqe vqe--loading" data-vqe-theme={props.theme}>
-        Loading the questionnaire...
+        {t("editor.loading")}
       </div>
     )
   }
@@ -56,7 +77,7 @@ export function QuestionnaireEditor(props: QuestionnaireEditorProps) {
     return (
       <div className="vqe vqe--error" role="alert" data-vqe-theme={props.theme}>
         {editor.error.message}
-        <Button onClick={() => void editor.reload()}>Try again</Button>
+        <Button onClick={() => void editor.reload()}>{t("editor.retry")}</Button>
       </div>
     )
   }
@@ -71,21 +92,23 @@ export function QuestionnaireEditor(props: QuestionnaireEditorProps) {
           <strong>{state.document.title || state.document.questionnaire.name}</strong>
           <span className="vqe-badge">v{state.document.version}</span>
           <span className="vqe-badge">{state.document.status}</span>
-          {editor.isDirty ? <span className="vqe-badge vqe-badge--warn">unsaved</span> : null}
+          {editor.isDirty ? (
+            <span className="vqe-badge vqe-badge--warn">{t("editor.badge.unsaved")}</span>
+          ) : null}
         </div>
         <div className="vqe__bar-actions">
           <Button onClick={() => editor.revert()} disabled={!editor.isDirty}>
-            Revert
+            {t("editor.revert")}
           </Button>
           <Button onClick={() => void editor.fork()} disabled={editor.isSaving}>
-            Fork into a new draft
+            {t("editor.fork")}
           </Button>
           <Button
             variant="primary"
             disabled={!canSave}
             onClick={() => void editor.save(gated ? { understood, reason } : undefined)}
           >
-            {editor.isSaving ? "Saving..." : "Save"}
+            {t(editor.isSaving ? "editor.saving" : "editor.save")}
           </Button>
         </div>
       </header>
@@ -93,19 +116,18 @@ export function QuestionnaireEditor(props: QuestionnaireEditorProps) {
       {gated ? (
         <section className="vqe__notice" role="note">
           <p>
-            This version already has{" "}
-            <strong>{state.saved.state?.responseCount ?? 0} response(s)</strong>. Changing what
-            a question asks changes what those answers mean. The ordinary way to make a change
-            like this is to fork a new draft; editing in place is allowed, and recorded.
+            {t("editor.acknowledge.notice", {
+              count: state.saved.state?.responseCount ?? 0,
+            })}
           </p>
           <Checkbox
-            label="I understand what this edit does to the responses already given."
+            label={t("editor.acknowledge.understood")}
             checked={understood}
             onChange={setUnderstood}
           />
           <TextInput
-            label="Reason"
-            hint="Kept with the record of the edit."
+            label={t("editor.acknowledge.reason")}
+            hint={t("editor.acknowledge.reasonHint")}
             value={reason}
             onChange={setReason}
           />
@@ -114,8 +136,7 @@ export function QuestionnaireEditor(props: QuestionnaireEditorProps) {
 
       {editor.orphanedKeys.length ? (
         <section className="vqe__notice vqe__notice--warn" role="note">
-          These question keys are gone since the last save, so the answers stored against them
-          will no longer be read: <code>{editor.orphanedKeys.join(", ")}</code>
+          {t("editor.orphaned", { keys: editor.orphanedKeys.join(", ") })}
         </section>
       ) : null}
 
@@ -127,9 +148,9 @@ export function QuestionnaireEditor(props: QuestionnaireEditorProps) {
 
       {issues.length ? (
         <section className="vqe__notice vqe__notice--error" role="alert">
-          <p>{issues.length} thing(s) need fixing before this can be saved:</p>
+          <p>{t("editor.issues.heading", { count: issues.length })}</p>
           <ul>
-            {summariseIssues(issues)
+            {summariseIssues(issues, strings)
               .slice(0, 10)
               .map((message, index) => (
                 <li key={index}>{message}</li>
@@ -185,5 +206,6 @@ function Inspector({ editor }: { editor: ReturnType<typeof useQuestionnaireEdito
 }
 
 function Missing() {
-  return <p className="vqe-form__hint">That is gone. Pick something from the outline.</p>
+  const t = useStrings()
+  return <p className="vqe-form__hint">{t("editor.missing")}</p>
 }

@@ -26,6 +26,7 @@ import {
   type EditorState,
   type Selection,
 } from "../editorState.js"
+import { useStringCatalog, type WithStrings } from "./strings.js"
 
 const EMPTY: QuestionnaireDefinition = {
   documentVersion: 1,
@@ -42,7 +43,7 @@ const EMPTY: QuestionnaireDefinition = {
   pages: [],
 }
 
-export interface UseQuestionnaireEditorOptions {
+export interface UseQuestionnaireEditorOptions extends WithStrings {
   api: EditorApi
   questionnaire: string
   version: number
@@ -81,6 +82,10 @@ export function useQuestionnaireEditor(
   options: UseQuestionnaireEditorOptions,
 ): QuestionnaireEditor {
   const { api, questionnaire, version } = options
+  // The catalogue the local checks phrase themselves in. Inside
+  // `QuestionnaireEditor` it comes from the provider; used on its own the hook
+  // takes it from `options.strings`, and English if neither says otherwise.
+  const strings = useStringCatalog(options.strings)
   const [state, dispatch] = useReducer(editorReducer, EMPTY, initialState)
   const [catalog, setCatalog] = useState<EditorCatalog | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -118,8 +123,8 @@ export function useQuestionnaireEditor(
   }, [api, questionnaire, version])
 
   const localIssues = useMemo(
-    () => validateDefinition(state.document, catalog),
-    [state.document, catalog],
+    () => validateDefinition(state.document, catalog, strings),
+    [state.document, catalog, strings],
   )
   // What the server refused stays visible until the next save clears it, so
   // both halves of the picture are on screen at once.
@@ -131,7 +136,7 @@ export function useQuestionnaireEditor(
   const save = useCallback(
     async (acknowledgement?: EditAcknowledgement) => {
       const current = latest.current
-      const local = validateDefinition(current.document, catalog)
+      const local = validateDefinition(current.document, catalog, strings)
       if (local.length) {
         dispatch({ type: "issues", issues: local })
         return false
@@ -159,7 +164,7 @@ export function useQuestionnaireEditor(
         setIsSaving(false)
       }
     },
-    [api, catalog, questionnaire, version],
+    [api, catalog, questionnaire, strings, version],
   )
 
   const reload = useCallback(async () => {

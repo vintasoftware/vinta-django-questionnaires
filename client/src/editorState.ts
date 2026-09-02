@@ -26,6 +26,13 @@ import {
   type ValidatorDefinition,
   type WindowSizeRangeDefinition,
 } from "./definition.js"
+import {
+  defaultStrings,
+  translate,
+  type ParamsOf,
+  type StringKey,
+  type StringOverrides,
+} from "./strings.js"
 
 // -------------------------------------------------------------------- paths
 
@@ -147,10 +154,13 @@ export function uniqueKey(base: string, taken: Iterable<string>): string {
   return `${stem}-${counter}`
 }
 
-export function newPage(taken: Iterable<string>): PageDefinition {
+export function newPage(
+  taken: Iterable<string>,
+  title = defaultStrings["editor.new.page"],
+): PageDefinition {
   return {
     key: uniqueKey("page", taken),
-    title: "Untitled page",
+    title,
     description: "",
     conclusion: "",
     condition: "",
@@ -160,10 +170,13 @@ export function newPage(taken: Iterable<string>): PageDefinition {
   }
 }
 
-export function newSection(taken: Iterable<string>): SectionDefinition {
+export function newSection(
+  taken: Iterable<string>,
+  title = defaultStrings["editor.new.section"],
+): SectionDefinition {
   return {
     key: uniqueKey("section", taken),
-    title: "Untitled section",
+    title,
     description: "",
     conclusion: "",
     defaultState: "open",
@@ -176,10 +189,11 @@ export function newSection(taken: Iterable<string>): SectionDefinition {
 export function newQuestion(
   taken: Iterable<string>,
   questionType = "free_text",
+  title = defaultStrings["editor.new.question"],
 ): QuestionDefinition {
   return {
     key: uniqueKey("question", taken),
-    title: "Untitled question",
+    title,
     description: "",
     questionType,
     itemQuestionType: "",
@@ -244,7 +258,12 @@ export type EditorAction =
   | { type: "issues"; issues: DefinitionIssue[] }
   | { type: "patchVersion"; patch: Partial<QuestionnaireDefinition> }
   | { type: "patch"; path: NodePath; patch: Record<string, unknown> }
-  | { type: "insert"; path: NodePath | null; index?: number }
+  /**
+   * *title* is what the new node is called until it is named. The reducer is
+   * pure and has no catalogue, so a translated editor sends the word down with
+   * the action rather than the reducer reaching for it.
+   */
+  | { type: "insert"; path: NodePath | null; index?: number; title?: string }
   | { type: "remove"; path: NodePath }
   | { type: "move"; path: NodePath; by: number }
   /** Drag and drop: `path` is the *parent*, `null` for the list of pages. */
@@ -395,23 +414,24 @@ function insertNode(
   document: QuestionnaireDefinition,
   path: NodePath | null,
   index?: number,
+  title?: string,
 ): QuestionnaireDefinition {
   const taken = keysUnder(document, path)
   if (path === null) {
     const pages = [...document.pages]
-    pages.splice(index ?? pages.length, 0, newPage(taken))
+    pages.splice(index ?? pages.length, 0, newPage(taken, title))
     return { ...document, pages }
   }
   if (isSectionPath(path)) {
     return mapSection(document, path, (section) => {
       const questions = [...section.questions]
-      questions.splice(index ?? questions.length, 0, newQuestion(taken))
+      questions.splice(index ?? questions.length, 0, newQuestion(taken, undefined, title))
       return { ...section, questions }
     })
   }
   return mapPage(document, path, (page) => {
     const sections = [...page.sections]
-    sections.splice(index ?? sections.length, 0, newSection(taken))
+    sections.splice(index ?? sections.length, 0, newSection(taken, title))
     return { ...page, sections }
   })
 }
@@ -560,7 +580,10 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
     case "patch":
       return { ...state, document: patchNode(state.document, action.path, action.patch) }
     case "insert":
-      return { ...state, document: insertNode(state.document, action.path, action.index) }
+      return {
+        ...state,
+        document: insertNode(state.document, action.path, action.index, action.title),
+      }
     case "remove":
       return {
         ...state,
@@ -735,10 +758,11 @@ export function orphanedQuestionKeys(state: EditorState): string[] {
 export function validateDefinition(
   document: QuestionnaireDefinition,
   catalog: EditorCatalog | null,
+  strings: StringOverrides = {},
 ): DefinitionIssue[] {
   const issues: DefinitionIssue[] = []
-  const add = (path: string, field: string, message: string) =>
-    issues.push({ path, errors: { [field]: [message] } })
+  const add: Report = (path, field, key, ...params) =>
+    issues.push({ path, errors: { [field]: [translate(strings, key, ...params)] } })
 
   const questionKeys = new Map<string, number>()
   for (const { question } of allQuestions(document)) {
@@ -749,25 +773,24 @@ export function validateDefinition(
   document.pages.forEach((page, pageIndex) => {
     const pagePath = `pages.${pageIndex}`
     checkKey(page.key, pagePath, add)
-    if (pageKeys.has(page.key)) add(pagePath, "key", "Another page already uses this key.")
+    if (pageKeys.has(page.key)) add(pagePath, "key", "issue.page.duplicateKey")
     pageKeys.add(page.key)
-    if (!page.title.trim()) add(pagePath, "title", "A page needs a title.")
+    if (!page.title.trim()) add(pagePath, "title", "issue.page.title")
 
     const sectionKeys = new Set<string>()
     page.sections.forEach((section, sectionIndex) => {
       const sectionPath = `${pagePath}.sections.${sectionIndex}`
       checkKey(section.key, sectionPath, add)
-      if (sectionKeys.has(section.key))
-        add(sectionPath, "key", "Another section of this page already uses this key.")
+      if (sectionKeys.has(section.key)) add(sectionPath, "key", "issue.section.duplicateKey")
       sectionKeys.add(section.key)
-      if (!section.title.trim()) add(sectionPath, "title", "A section needs a title.")
+      if (!section.title.trim()) add(sectionPath, "title", "issue.section.title")
 
       section.questions.forEach((question, questionIndex) => {
         const path = `${sectionPath}.questions.${questionIndex}`
         checkKey(question.key, path, add)
         if ((questionKeys.get(question.key) ?? 0) > 1)
-          add(path, "key", "Another question of this version already uses this key.")
-        if (!question.title.trim()) add(path, "title", "A question needs a title.")
+          add(path, "key", "issue.question.duplicateKey")
+        if (!question.title.trim()) add(path, "title", "issue.question.title")
         checkQuestionType(question, path, catalog, add)
         checkChoices(question, path, add)
       })
@@ -777,13 +800,22 @@ export function validateDefinition(
   return issues
 }
 
-type Report = (path: string, field: string, message: string) => void
+/**
+ * How a check reports what it found: by string key, not by sentence, so the
+ * catalogue decides the wording and this file stays about the rules.
+ */
+type Report = <Key extends StringKey>(
+  path: string,
+  field: string,
+  key: Key,
+  ...params: ParamsOf<Key>
+) => void
 
 function checkKey(key: string, path: string, add: Report): void {
   if (!key.trim()) {
-    add(path, "key", "A key is required -- answers are stored against it.")
+    add(path, "key", "issue.key.required")
   } else if (!KEY_PATTERN.test(key)) {
-    add(path, "key", "A key may hold letters, digits, hyphens and underscores only.")
+    add(path, "key", "issue.key.invalid")
   }
 }
 
@@ -796,36 +828,34 @@ function checkQuestionType(
   if (!catalog) return
   const info = questionTypeInfo(catalog, question.questionType)
   if (!info) {
-    add(path, "questionType", "Pick a question type.")
+    add(path, "questionType", "issue.questionType.missing")
     return
   }
   if (info.requiresItemType && !question.itemQuestionType)
-    add(path, "itemQuestionType", "A list of items needs the type of its items.")
+    add(path, "itemQuestionType", "issue.itemType.required")
   if (!info.requiresItemType && question.itemQuestionType)
-    add(path, "itemQuestionType", "Only a list of items takes an item type.")
+    add(path, "itemQuestionType", "issue.itemType.unsupported")
   if (info.requiresSubQuestionnaire && !question.subQuestionnaire)
-    add(path, "subQuestionnaire", "This question type needs a sub-questionnaire.")
+    add(path, "subQuestionnaire", "issue.subQuestionnaire.required")
   if (!info.requiresSubQuestionnaire && question.subQuestionnaire)
-    add(path, "subQuestionnaire", "Only a sub-questionnaire question nests another one.")
+    add(path, "subQuestionnaire", "issue.subQuestionnaire.unsupported")
   if (info.supportsValueSet && !info.supportsChoices && !question.valueSet)
-    add(path, "valueSet", "This question type needs a value set.")
+    add(path, "valueSet", "issue.valueSet.required")
   if (!info.supportsValueSet && question.valueSet)
-    add(path, "valueSet", "This question type does not take a value set.")
+    add(path, "valueSet", "issue.valueSet.unsupported")
   if (!info.supportsOtherOption && question.allowsOther)
-    add(path, "allowsOther", "This question type does not take an other option.")
+    add(path, "allowsOther", "issue.allowsOther.unsupported")
   if (!info.supportsChoices && question.choices.length)
-    add(path, "choices", "This question type does not take choices.")
+    add(path, "choices", "issue.choices.unsupported")
 
   for (const [index, binding] of question.validators.entries()) {
     const info = catalog.validators.find((entry) => entry.key === binding.validator)
     if (!info) {
-      add(`${path}.validators.${index}`, "validator", "There is no validator with this key.")
+      add(`${path}.validators.${index}`, "validator", "issue.validator.unknown")
     } else if (info.questionTypes && !info.questionTypes.includes(question.questionType)) {
-      add(
-        `${path}.validators.${index}`,
-        "validator",
-        `${info.label} does not apply to this question type.`,
-      )
+      add(`${path}.validators.${index}`, "validator", "issue.validator.inapplicable", {
+        label: info.label,
+      })
     }
   }
 }
@@ -835,26 +865,30 @@ function checkChoices(question: QuestionDefinition, path: string, add: Report): 
   question.choices.forEach((choice, index) => {
     const key = `${choice.axis}:${choice.value}`
     if (!choice.value.trim()) {
-      add(
-        `${path}.choices.${index}`,
-        "value",
-        "A choice needs a value -- it is what is stored.",
-      )
+      add(`${path}.choices.${index}`, "value", "issue.choice.valueRequired")
     } else if (seen.has(key)) {
-      add(`${path}.choices.${index}`, "value", "Another choice already uses this value.")
+      add(`${path}.choices.${index}`, "value", "issue.choice.duplicateValue")
     }
     seen.add(key)
   })
 }
 
 /** A single flat message per issue, for somewhere with no room for a form. */
-export function summariseIssues(issues: readonly DefinitionIssue[]): string[] {
+export function summariseIssues(
+  issues: readonly DefinitionIssue[],
+  strings: StringOverrides = {},
+): string[] {
+  const root = translate(strings, "issue.summary.root")
   return issues.flatMap((issue) =>
     Object.entries(issue.errors).flatMap(([field, messages]) =>
       messages.map((message) =>
         field === NON_FIELD || !field
-          ? `${issue.path || "questionnaire"}: ${message}`
-          : `${issue.path || "questionnaire"} ${field}: ${message}`,
+          ? translate(strings, "issue.summary", { path: issue.path || root, message })
+          : translate(strings, "issue.summary.field", {
+              path: issue.path || root,
+              field,
+              message,
+            }),
       ),
     ),
   )

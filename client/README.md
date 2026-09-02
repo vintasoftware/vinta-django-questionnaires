@@ -201,6 +201,106 @@ editor inside a light page. Both palettes pass WCAG 2.1 AA.
 
 Or skip `editor.css` entirely and style those class names yourself.
 
+### Speaking another language
+
+The package carries no i18n dependency: which one to use belongs to the project
+installing this, not to the library. Instead every word the editor says lives
+in a catalogue keyed by name, and a host replaces as much of it as it likes:
+
+```tsx
+<QuestionnaireEditor
+  api={api}
+  questionnaire="intake"
+  version={2}
+  strings={{
+    "editor.save": "Salvar",
+    "field.title": "Título",
+    "editor.issues.heading": ({ count }) =>
+      count === 1
+        ? "1 coisa a corrigir antes de salvar:"
+        : `${count} coisas a corrigir antes de salvar:`,
+  }}
+/>
+```
+
+Whatever is left out stays English, so a catalogue can be filled in over time
+and a key added by a later release never leaves a blank on the screen. Import
+`defaultStrings` for the full list, or read `src/strings.ts`.
+
+Most entries are a plain string, because most sentences stand on their own. The
+twenty-two that do not are functions, taking what the editor only knows as it
+renders. There is no template syntax between the two -- no placeholder to spell
+right, nothing substituted at run time -- and nothing to remember about which
+key is which, because the type says so:
+
+```tsx
+t("editor.save")                             // ok
+t("editor.issues.heading")                   // error: expected 2 arguments, got 1
+t("editor.issues.heading", { cont: 3 })      // error: did you mean 'count'?
+t("editor.issues.heading", { count: "3" })   // error: string is not a number
+
+strings={{ "editor.save": () => "Salvar" }}  // error: expected a string
+```
+
+### Using the i18n library you already have
+
+This is what the functions are for. Their parameters are only known as the
+editor renders, so a finished string could never reach your `t()` carrying
+them. A function can, and hands the whole sentence -- interpolation, plurals,
+gender -- to whatever the project already uses:
+
+```tsx
+import { useTranslation } from "react-i18next"
+
+const { t } = useTranslation()
+
+<QuestionnaireEditor
+  strings={{
+    "editor.save": t("questionnaire.save"),
+    "editor.issues.heading": ({ count }) => t("questionnaire.issues", { count }),
+  }}
+  {...props}
+/>
+```
+
+The plain ones need no wrapping: call your `t()` as the object is built, which
+happens on every render, so a change of locale reaches them like any other
+state. Plurals are that library's problem, then, and it has real rules for them
+-- which a catalogue of our own could not have had. The English defaults say
+"response(s)" and leave it there.
+
+A catalogue that arrives as data is already most of the way to this shape --
+its plain strings go straight in, and only the parameterised keys need a
+function written for them.
+
+### Reaching the whole editor
+
+Every part of the editor is exported on its own, so the catalogue rides a React
+context rather than being threaded down as props. Composing your own interface,
+wrap it once:
+
+```tsx
+import { QuestionnaireStringsProvider } from "vinta-django-questionnaires-client/editor"
+
+<QuestionnaireStringsProvider strings={ptBR}>
+  <Outline {...props} />
+  <QuestionForm {...props} />
+</QuestionnaireStringsProvider>
+```
+
+Each component also takes its own `strings` prop, which wins over the context
+for that subtree. `useQuestionnaireEditor` reads the same catalogue, so the
+problems it finds before a save are worded by it too.
+
+Two things are deliberately not in the catalogue:
+
+- **What a respondent sees when an answer fails.** Those messages are templates
+  the server sends down in the plan, translated by Django, and this package
+  only fills in their placeholders. Translating them here would mean
+  translating them twice, differently.
+- **Diagnostics and thrown `Error`s.** They go to consoles and error trackers,
+  where a stable English string is worth more than a translated one.
+
 ### Building your own
 
 `QuestionnaireEditor` is one component over a hook, and the hook is one layer

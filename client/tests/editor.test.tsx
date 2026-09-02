@@ -365,3 +365,73 @@ describe("the editor", () => {
     await screen.findByText("Not found.")
   })
 })
+
+describe("its words", () => {
+  const ptBR = {
+    "editor.save": "Salvar",
+    "field.title": "Título",
+    "field.key": "Chave",
+    "outline.add.page": "+ Página",
+    "editor.new.page": "Página sem título",
+    "outline.badge.skippable": "pulável",
+    "issue.page.title": "Uma página precisa de um título.",
+    // The parameters arrive named and typed, so a translation decides where
+    // they go -- and, here, how to count them.
+    "editor.issues.heading": ({ count }: { count: number }) =>
+      count === 1
+        ? "1 coisa a corrigir antes de salvar:"
+        : `${count} coisas a corrigir antes de salvar:`,
+  }
+
+  it("says whatever the catalogue passed in says", async () => {
+    render(
+      <QuestionnaireEditor api={fakeApi()} questionnaire="intake" version={1} strings={ptBR} />,
+    )
+    await screen.findByText("About")
+
+    expect(screen.getByText("Salvar")).toBeTruthy()
+    expect(screen.getByLabelText("Título")).toBeTruthy()
+    expect(screen.getByText("pulável")).toBeTruthy()
+    // The catalogue reaches the outline and the forms alike, through the
+    // context rather than through a prop threaded down by hand.
+    expect(screen.getByText("+ Página")).toBeTruthy()
+  })
+
+  it("leaves whatever the catalogue does not cover in English", async () => {
+    render(
+      <QuestionnaireEditor api={fakeApi()} questionnaire="intake" version={1} strings={ptBR} />,
+    )
+    await screen.findByText("About")
+
+    expect(screen.getByText("Revert")).toBeTruthy()
+    expect(screen.getByLabelText("Description")).toBeTruthy()
+  })
+
+  it("names a new node with the catalogue's word for it", async () => {
+    render(
+      <QuestionnaireEditor api={fakeApi()} questionnaire="intake" version={1} strings={ptBR} />,
+    )
+    await screen.findByText("About")
+
+    fireEvent.click(screen.getByText("+ Página"))
+
+    expect(screen.getByText("Página sem título")).toBeTruthy()
+  })
+
+  it("phrases what it found wrong in the catalogue's words too", async () => {
+    render(
+      <QuestionnaireEditor api={fakeApi()} questionnaire="intake" version={1} strings={ptBR} />,
+    )
+    await screen.findByText("About")
+
+    fireEvent.click(screen.getByText("About"))
+    fireEvent.change(screen.getByLabelText("Título"), { target: { value: "" } })
+    fireEvent.click(screen.getByText("Salvar"))
+
+    // The local checks report by key, so the catalogue words them -- and the
+    // count is substituted into the heading rather than concatenated onto it.
+    // Twice over: under the field it belongs to, and in the summary at the top.
+    expect(screen.getAllByText(/Uma página precisa de um título/)).toHaveLength(2)
+    expect(screen.getByText("1 coisa a corrigir antes de salvar:")).toBeTruthy()
+  })
+})

@@ -56,9 +56,13 @@
 
       handle.setAttribute("tabindex", "0")
       handle.setAttribute("role", "button")
+      // The label comes from the template, which is where a translation can
+      // reach it -- this file is served as a static asset, not rendered.
       handle.setAttribute(
         "aria-label",
-        handle.getAttribute("title") || "Reorder, with the arrow keys",
+        handle.getAttribute("data-vqa-handle") ||
+          handle.getAttribute("title") ||
+          "Reorder, with the arrow keys",
       )
       node.setAttribute("draggable", "true")
 

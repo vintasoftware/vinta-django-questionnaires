@@ -36,14 +36,13 @@ import {
 import { SchemaForm } from "./SchemaForm.js"
 import { DragHandle, SortableItem, SortableList, type HandleProps } from "./Sortable.js"
 import { Button, Checkbox, Errors, NumberInput, Select, TextArea, TextInput } from "./fields.js"
-
-const KEY_HINT =
-  "Answers are stored against this. Changing it orphans the answers already given."
+import { useStrings, type WithStrings } from "./strings.js"
+import type { Translate } from "../strings.js"
 
 /** The keys `newPage`, `newSection` and `newQuestion` hand out. */
 const GENERATED_KEY = /^(page|section|question)(-\d+)?$/
 
-interface Common {
+interface Common extends WithStrings {
   catalog: EditorCatalog | null
   issues: readonly DefinitionIssue[]
   dispatch: (action: EditorAction) => void
@@ -56,7 +55,9 @@ export function VersionForm({
   catalog,
   issues,
   dispatch,
+  strings,
 }: Common & { document: QuestionnaireDefinition }) {
+  const t = useStrings(strings)
   const errors = issuesAt(issues, "")
   const patch = (change: Partial<QuestionnaireDefinition>) =>
     dispatch({ type: "patchVersion", patch: change })
@@ -69,57 +70,58 @@ export function VersionForm({
         </h2>
         <p className="vqe-form__hint">
           {document.state?.responseCount
-            ? `${document.state.responseCount} response(s) have already been given against this version.`
-            : "No responses yet, so this version can still be changed freely."}
+            ? t("version.responses", { count: document.state.responseCount })
+            : t("version.noResponses")}
         </p>
       </header>
 
       <TextInput
-        label="Title"
+        label={t("field.title")}
         value={document.title}
         errors={errors.title}
         onChange={(title) => patch({ title })}
       />
       <TextArea
-        label="Description"
-        hint="Markdown."
+        label={t("field.description")}
+        hint={t("field.markdownHint")}
         value={document.description}
         errors={errors.description}
         onChange={(description) => patch({ description })}
       />
       <Select
-        label="Status"
+        label={t("version.status")}
         value={document.status}
         options={catalog?.versionStatuses ?? []}
         errors={errors.status}
         onChange={(status) => patch({ status })}
       />
       <Select
-        label="Edit policy"
-        hint="Whether a respondent may come back and change what they answered."
+        label={t("version.editPolicy")}
+        hint={t("version.editPolicyHint")}
         value={document.editPolicy}
         options={catalog?.editPolicies ?? []}
         errors={errors.edit_policy}
         onChange={(editPolicy) => patch({ editPolicy })}
       />
       <TextInput
-        label="Responses due at"
-        hint="ISO 8601, e.g. 2026-12-31T23:59:00Z. Empty for no deadline."
+        label={t("version.responsesDueAt")}
+        hint={t("version.dueAtHint")}
         value={document.responsesDueAt ?? ""}
         errors={errors.responsesDueAt ?? errors.responses_due_at}
         onChange={(value) => patch({ responsesDueAt: value || null })}
       />
       <TextInput
-        label="Edits due at"
+        label={t("version.editsDueAt")}
         value={document.editsDueAt ?? ""}
         errors={errors.editsDueAt ?? errors.edits_due_at}
         onChange={(value) => patch({ editsDueAt: value || null })}
       />
 
-      <RangeList document={document} issues={issues} dispatch={dispatch} />
+      <RangeList document={document} issues={issues} dispatch={dispatch} t={t} />
       <ColumnsField
-        label="Columns of the questionnaire's grid"
-        hint="What every page inherits unless it says otherwise."
+        t={t}
+        label={t("version.columns")}
+        hint={t("version.columnsHint")}
         document={document}
         columns={document.columns}
         path={null}
@@ -134,36 +136,35 @@ function RangeList({
   document,
   issues,
   dispatch,
+  t,
 }: {
   document: QuestionnaireDefinition
   issues: readonly DefinitionIssue[]
   dispatch: (action: EditorAction) => void
+  t: Translate
 }) {
   return (
     <fieldset className="vqe-fieldset">
-      <legend className="vqe-fieldset__legend">Window size ranges</legend>
-      <p className="vqe-form__hint">
-        The breakpoints this questionnaire is laid out against. Every column count below is
-        keyed by one of them.
-      </p>
+      <legend className="vqe-fieldset__legend">{t("ranges.legend")}</legend>
+      <p className="vqe-form__hint">{t("ranges.hint")}</p>
       {document.windowSizeRanges.map((range, index) => {
         const errors = issuesAt(issues, `windowSizeRanges.${index}`)
         return (
           <div className="vqe-row" key={index}>
             <TextInput
-              label="Key"
+              label={t("field.key")}
               value={range.key}
               errors={errors.key}
               onChange={(key) => dispatch({ type: "patchRange", index, patch: { key } })}
             />
             <TextInput
-              label="Label"
+              label={t("field.label")}
               value={range.label}
               errors={errors.label}
               onChange={(label) => dispatch({ type: "patchRange", index, patch: { label } })}
             />
             <NumberInput
-              label="From (px)"
+              label={t("ranges.from")}
               min={0}
               value={range.minWidth}
               errors={errors.min_width}
@@ -176,9 +177,9 @@ function RangeList({
               }
             />
             <NumberInput
-              label="To (px)"
+              label={t("ranges.to")}
               min={0}
-              placeholder="unbounded"
+              placeholder={t("ranges.unbounded")}
               value={range.maxWidth}
               errors={errors.max_width}
               onChange={(maxWidth) =>
@@ -186,13 +187,13 @@ function RangeList({
               }
             />
             <Button variant="danger" onClick={() => dispatch({ type: "removeRange", index })}>
-              Remove
+              {t("field.remove")}
             </Button>
           </div>
         )
       })}
       <Button variant="quiet" onClick={() => dispatch({ type: "insertRange" })}>
-        + Window size range
+        {t("ranges.add")}
       </Button>
     </fieldset>
   )
@@ -206,11 +207,13 @@ export function PageForm({
   document,
   issues,
   dispatch,
+  strings,
 }: Common & {
   page: PageDefinition
   path: NodePath
   document: QuestionnaireDefinition
 }) {
+  const t = useStrings(strings)
   const errors = issuesAt(issues, pathOf(path))
   const patch = (change: Partial<PageDefinition>) =>
     dispatch({ type: "patch", path, patch: change })
@@ -218,9 +221,10 @@ export function PageForm({
   return (
     <section className="vqe-form">
       <header className="vqe-form__header">
-        <h2>Page</h2>
+        <h2>{t("page.heading")}</h2>
       </header>
       <KeyAndTitle
+        t={t}
         keyValue={page.key}
         title={page.title}
         errors={errors}
@@ -228,34 +232,36 @@ export function PageForm({
         onTitle={(title) => patch({ title })}
       />
       <TextArea
-        label="Description"
-        hint="Markdown, shown at the top of the page."
+        label={t("field.description")}
+        hint={t("page.descriptionHint")}
         value={page.description}
         errors={errors.description}
         onChange={(description) => patch({ description })}
       />
       <TextArea
-        label="Conclusion"
-        hint="Markdown, shown once the page is filled in."
+        label={t("field.conclusion")}
+        hint={t("page.conclusionHint")}
         value={page.conclusion}
         errors={errors.conclusion}
         onChange={(conclusion) => patch({ conclusion })}
       />
       <ConditionField
+        t={t}
         value={page.condition}
         errors={errors.condition}
         onChange={(condition) => patch({ condition })}
       />
       <Checkbox
-        label="Skippable"
-        hint="Whether the respondent may leave this page for later and move on."
+        label={t("page.skippable")}
+        hint={t("page.skippableHint")}
         checked={page.isSkippable}
         errors={errors.is_skippable}
         onChange={(isSkippable) => patch({ isSkippable })}
       />
       <ColumnsField
-        label="Columns of this page's grid"
-        hint="Empty inherits from the questionnaire."
+        t={t}
+        label={t("page.columns")}
+        hint={t("page.columnsHint")}
         document={document}
         columns={page.columns}
         path={path}
@@ -273,11 +279,13 @@ export function SectionForm({
   catalog,
   issues,
   dispatch,
+  strings,
 }: Common & {
   section: SectionDefinition
   path: SectionPath
   document: QuestionnaireDefinition
 }) {
+  const t = useStrings(strings)
   const errors = issuesAt(issues, pathOf(path))
   const patch = (change: Partial<SectionDefinition>) =>
     dispatch({ type: "patch", path, patch: change })
@@ -285,9 +293,10 @@ export function SectionForm({
   return (
     <section className="vqe-form">
       <header className="vqe-form__header">
-        <h2>Section</h2>
+        <h2>{t("section.heading")}</h2>
       </header>
       <KeyAndTitle
+        t={t}
         keyValue={section.key}
         title={section.title}
         errors={errors}
@@ -295,22 +304,22 @@ export function SectionForm({
         onTitle={(title) => patch({ title })}
       />
       <TextArea
-        label="Description"
-        hint="Markdown."
+        label={t("field.description")}
+        hint={t("field.markdownHint")}
         value={section.description}
         errors={errors.description}
         onChange={(description) => patch({ description })}
       />
       <TextArea
-        label="Conclusion"
-        hint="Markdown."
+        label={t("field.conclusion")}
+        hint={t("field.markdownHint")}
         value={section.conclusion}
         errors={errors.conclusion}
         onChange={(conclusion) => patch({ conclusion })}
       />
       <Select
-        label="Default state"
-        hint="Whether the section starts open or collapsed."
+        label={t("section.defaultState")}
+        hint={t("section.defaultStateHint")}
         value={section.defaultState}
         options={catalog?.sectionStates ?? []}
         errors={errors.default_state}
@@ -319,13 +328,15 @@ export function SectionForm({
         }
       />
       <ConditionField
+        t={t}
         value={section.condition}
         errors={errors.condition}
         onChange={(condition) => patch({ condition })}
       />
       <ColumnsField
-        label="Columns of this section's grid"
-        hint="Empty inherits from the page."
+        t={t}
+        label={t("section.columns")}
+        hint={t("section.columnsHint")}
         document={document}
         columns={section.columns}
         path={path}
@@ -345,11 +356,13 @@ export function QuestionForm({
   catalog,
   issues,
   dispatch,
+  strings,
 }: Common & {
   question: QuestionDefinition
   path: QuestionPath
   document: QuestionnaireDefinition
 }) {
+  const t = useStrings(strings)
   const base = pathOf(path)
   const errors = issuesAt(issues, base)
   const patch = (change: Partial<QuestionDefinition>) =>
@@ -364,16 +377,18 @@ export function QuestionForm({
   return (
     <section className="vqe-form">
       <header className="vqe-form__header">
-        <h2>Question</h2>
+        <h2>{t("question.heading")}</h2>
         {question.resolved?.fingerprint ? (
           <p className="vqe-form__hint">
-            Fingerprint <code>{question.resolved.fingerprint.slice(0, 12)}</code> -- answers
-            from another version pool with this question while it stays the same.
+            {t("question.fingerprint", {
+              fingerprint: question.resolved.fingerprint.slice(0, 12),
+            })}
           </p>
         ) : null}
       </header>
 
       <KeyAndTitle
+        t={t}
         keyValue={question.key}
         title={question.title}
         errors={errors}
@@ -381,14 +396,14 @@ export function QuestionForm({
         onTitle={(title) => patch({ title })}
       />
       <TextArea
-        label="Description"
-        hint="Markdown."
+        label={t("field.description")}
+        hint={t("field.markdownHint")}
         value={question.description}
         errors={errors.description}
         onChange={(description) => patch({ description })}
       />
       <Select
-        label="Question type"
+        label={t("question.type")}
         value={question.questionType}
         options={(catalog?.questionTypes ?? []).map((entry) => ({
           value: entry.key,
@@ -400,10 +415,10 @@ export function QuestionForm({
 
       {info?.requiresItemType ? (
         <Select
-          label="Item type"
-          hint="The type of each entry of the list."
+          label={t("question.itemType")}
+          hint={t("question.itemTypeHint")}
           value={question.itemQuestionType}
-          emptyLabel="--"
+          emptyLabel={t("field.empty")}
           options={(catalog?.questionTypes ?? [])
             .filter((entry) => catalog?.scalarQuestionTypes.includes(entry.key))
             .map((entry) => ({ value: entry.key, label: entry.label }))}
@@ -415,9 +430,9 @@ export function QuestionForm({
       {info?.requiresSubQuestionnaire ? (
         <>
           <Select
-            label="Sub-questionnaire"
+            label={t("question.subQuestionnaire")}
             value={question.subQuestionnaire ?? ""}
-            emptyLabel="--"
+            emptyLabel={t("field.empty")}
             options={(catalog?.questionnaires ?? []).map((entry) => ({
               value: entry.key,
               label: entry.name,
@@ -431,16 +446,20 @@ export function QuestionForm({
             }
           />
           <Select
-            label="Pinned version"
-            hint="Empty follows whichever version of it is published."
+            label={t("question.pinnedVersion")}
+            hint={t("question.pinnedVersionHint")}
             value={question.subQuestionnaireVersion?.toString() ?? ""}
-            emptyLabel="Latest published"
+            emptyLabel={t("question.latestPublished")}
             options={(
               catalog?.questionnaires.find((entry) => entry.key === question.subQuestionnaire)
                 ?.versions ?? []
             ).map((entry) => ({
               value: String(entry.version),
-              label: `v${entry.version} -- ${entry.title} (${entry.status})`,
+              label: t("question.versionOption", {
+                version: entry.version,
+                title: entry.title,
+                status: entry.status,
+              }),
             }))}
             errors={errors.sub_questionnaire_version ?? errors.subQuestionnaireVersion}
             onChange={(value) =>
@@ -452,14 +471,12 @@ export function QuestionForm({
 
       {info?.supportsValueSet ? (
         <Select
-          label="Value set"
-          hint={
-            info.supportsChoices
-              ? "Where the options come from, instead of the inline choices below."
-              : "Where the options come from."
-          }
+          label={t("question.valueSet")}
+          hint={t(
+            info.supportsChoices ? "question.valueSetHintWithChoices" : "question.valueSetHint",
+          )}
           value={question.valueSet ?? ""}
-          emptyLabel="--"
+          emptyLabel={t("field.empty")}
           options={(catalog?.valueSets ?? []).map((entry) => ({
             value: entry.key,
             label: entry.name,
@@ -472,15 +489,15 @@ export function QuestionForm({
       {info?.supportsOtherOption ? (
         <>
           <Checkbox
-            label="Allows an other option"
-            hint="Adds a free text escape hatch to the choices."
+            label={t("question.allowsOther")}
+            hint={t("question.allowsOtherHint")}
             checked={question.allowsOther}
             errors={errors.allows_other ?? errors.allowsOther}
             onChange={(allowsOther) => patch({ allowsOther })}
           />
           {question.allowsOther ? (
             <TextInput
-              label="Other label"
+              label={t("question.otherLabel")}
               value={question.otherLabel}
               errors={errors.other_label}
               onChange={(otherLabel) => patch({ otherLabel })}
@@ -490,24 +507,26 @@ export function QuestionForm({
       ) : null}
 
       <ConditionField
+        t={t}
         value={question.condition}
         errors={errors.condition}
         onChange={(condition) => patch({ condition })}
       />
 
       <fieldset className="vqe-fieldset">
-        <legend className="vqe-fieldset__legend">Layout</legend>
+        <legend className="vqe-fieldset__legend">{t("question.layoutLegend")}</legend>
         <Checkbox
-          label="Must be first in its row"
+          label={t("question.firstInRow")}
           checked={question.requiresBeingFirstInARow}
           onChange={(value) => patch({ requiresBeingFirstInARow: value })}
         />
         <Checkbox
-          label="Must be last in its row"
+          label={t("question.lastInRow")}
           checked={question.requiresBeingLastInARow}
           onChange={(value) => patch({ requiresBeingLastInARow: value })}
         />
         <MinimumColumnsField
+          t={t}
           document={document}
           question={question}
           path={path}
@@ -517,16 +536,18 @@ export function QuestionForm({
       </fieldset>
 
       <fieldset className="vqe-fieldset">
-        <legend className="vqe-fieldset__legend">Widget</legend>
+        <legend className="vqe-fieldset__legend">{t("question.widgetLegend")}</legend>
         <Select
-          label="Widget"
+          label={t("question.widget")}
           hint={
             question.widget
-              ? "The component the client renders this with."
-              : `Empty uses the type's default${widget ? `, which is ${widget.name}` : ""}.`
+              ? t("question.widgetHint")
+              : widget
+                ? t("question.widgetDefaultNamedHint", { name: widget.name })
+                : t("question.widgetDefaultHint")
           }
           value={question.widget ?? ""}
-          emptyLabel="Default for the type"
+          emptyLabel={t("question.widgetEmpty")}
           options={(catalog ? widgetsFor(catalog, question.questionType) : []).map((entry) => ({
             value: entry.key,
             label: entry.name,
@@ -535,7 +556,7 @@ export function QuestionForm({
           onChange={(value) => patch({ widget: value || null })}
         />
         <SchemaForm
-          label="Widget props"
+          label={t("question.widgetProps")}
           schema={widget?.propsSchema}
           value={question.widgetProps}
           errors={errors.widget_props ?? errors.widgetProps}
@@ -551,6 +572,7 @@ export function QuestionForm({
           issues={issues}
           catalog={catalog}
           dispatch={dispatch}
+          t={t}
         />
       ) : null}
 
@@ -560,6 +582,7 @@ export function QuestionForm({
         issues={issues}
         catalog={catalog}
         dispatch={dispatch}
+        t={t}
       />
     </section>
   )
@@ -574,10 +597,12 @@ function ChoiceList({
   issues,
   catalog,
   dispatch,
+  t,
 }: Common & {
   question: QuestionDefinition
   path: QuestionPath
   matrix: boolean
+  t: Translate
 }) {
   const base = pathOf(path)
   const axes = matrix
@@ -587,17 +612,17 @@ function ChoiceList({
   return (
     <fieldset className="vqe-fieldset">
       <legend className="vqe-fieldset__legend">
-        {matrix ? "Rows and columns" : "Choices"}
+        {t(matrix ? "choices.matrixLegend" : "choices.legend")}
       </legend>
       <Errors errors={issuesAt(issues, base).choices} />
       <SortableList
-        label="choices"
+        label={t("choices.listName")}
         // Positional, so that editing a choice does not change the row's
         // identity: an id derived from the value would remount the row on
         // every keystroke and take the focus out of the field being typed in.
         ids={question.choices.map((_choice, index) => `choice-${index}`)}
         names={question.choices.map(
-          (choice) => choice.label || choice.value || "a blank choice",
+          (choice) => choice.label || choice.value || t("choices.blank"),
         )}
         onReorder={(from, to) =>
           dispatch({ type: "reorderItem", path, list: "choices", from, to })
@@ -612,11 +637,11 @@ function ChoiceList({
                 <div className="vqe-row">
                   <DragHandle
                     handle={handle}
-                    label={`choice ${choice.label || choice.value}`}
+                    label={t("choices.item", { name: choice.label || choice.value })}
                   />
                   {matrix ? (
                     <Select
-                      label="Axis"
+                      label={t("choices.axis")}
                       value={choice.axis}
                       options={axes}
                       errors={errors.axis}
@@ -632,8 +657,8 @@ function ChoiceList({
                     />
                   ) : null}
                   <TextInput
-                    label="Value"
-                    hint={index === 0 ? "What is stored in the answer." : undefined}
+                    label={t("choices.value")}
+                    hint={index === 0 ? t("choices.valueHint") : undefined}
                     value={choice.value}
                     errors={errors.value}
                     onChange={(value) =>
@@ -647,7 +672,7 @@ function ChoiceList({
                     }
                   />
                   <TextInput
-                    label="Label"
+                    label={t("field.label")}
                     value={choice.label}
                     errors={errors.label}
                     onChange={(label) =>
@@ -661,7 +686,7 @@ function ChoiceList({
                     }
                   />
                   <Checkbox
-                    label="Active"
+                    label={t("choices.active")}
                     checked={choice.isActive}
                     onChange={(isActive) =>
                       dispatch({
@@ -674,7 +699,7 @@ function ChoiceList({
                     }
                   />
                   <RemoveButton
-                    label="choice"
+                    title={t("choices.remove")}
                     onRemove={() =>
                       dispatch({
                         type: "removeItem",
@@ -694,7 +719,7 @@ function ChoiceList({
         variant="quiet"
         onClick={() => dispatch({ type: "insertItem", path, list: "choices" })}
       >
-        + Choice
+        {t("choices.add")}
       </Button>
     </fieldset>
   )
@@ -708,18 +733,17 @@ function ValidatorList({
   issues,
   catalog,
   dispatch,
-}: Common & { question: QuestionDefinition; path: QuestionPath }) {
+  t,
+}: Common & { question: QuestionDefinition; path: QuestionPath; t: Translate }) {
   const base = pathOf(path)
   const applicable = catalog ? validatorsFor(catalog, question.questionType) : []
 
   return (
     <fieldset className="vqe-fieldset">
-      <legend className="vqe-fieldset__legend">Validators</legend>
-      <p className="vqe-form__hint">
-        They run in this order, and each one sees what the ones before it recorded.
-      </p>
+      <legend className="vqe-fieldset__legend">{t("validators.legend")}</legend>
+      <p className="vqe-form__hint">{t("validators.hint")}</p>
       <SortableList
-        label="validators"
+        label={t("validators.listName")}
         ids={question.validators.map((_binding, index) => `validator-${index}`)}
         names={question.validators.map((binding) => binding.validator)}
         onReorder={(from, to) =>
@@ -738,6 +762,7 @@ function ValidatorList({
                 info={catalog ? validatorInfo(catalog, binding.validator) : undefined}
                 errors={issuesAt(issues, `${base}.validators.${index}`)}
                 dispatch={dispatch}
+                t={t}
               />
             )}
           </SortableItem>
@@ -747,7 +772,7 @@ function ValidatorList({
         variant="quiet"
         onClick={() => dispatch({ type: "insertItem", path, list: "validators" })}
       >
-        + Validator
+        {t("validators.add")}
       </Button>
     </fieldset>
   )
@@ -762,8 +787,10 @@ function ValidatorRow({
   info,
   errors,
   dispatch,
+  t,
 }: {
   handle: HandleProps
+  t: Translate
   binding: ValidatorDefinition
   index: number
   path: QuestionPath
@@ -784,9 +811,9 @@ function ValidatorRow({
   return (
     <div className="vqe-card">
       <div className="vqe-row">
-        <DragHandle handle={handle} label={`validator ${binding.validator}`} />
+        <DragHandle handle={handle} label={t("validators.item", { name: binding.validator })} />
         <Select
-          label={`${index + 1}.`}
+          label={t("validators.position", { position: index + 1 })}
           value={binding.validator}
           options={applicable.map((entry) => ({
             value: entry.key,
@@ -796,12 +823,12 @@ function ValidatorRow({
           onChange={(validator) => patch({ validator, params: {}, messageOverrides: {} })}
         />
         <Checkbox
-          label="Enabled"
+          label={t("validators.enabled")}
           checked={binding.isEnabled}
           onChange={(isEnabled) => patch({ isEnabled })}
         />
         <RemoveButton
-          label="validator"
+          title={t("validators.remove")}
           onRemove={() => dispatch({ type: "removeItem", path, list: "validators", index })}
         />
       </div>
@@ -811,24 +838,21 @@ function ValidatorRow({
           <p className="vqe-form__hint">
             {info.description}
             {info.clientMode === "server_only" ? (
-              <strong> Checked on submit only -- the browser cannot run it.</strong>
+              <strong> {t("validators.serverOnly")}</strong>
             ) : null}
             {info.clientMode === "custom" ? (
-              <strong>
-                {" "}
-                Needs an implementation registered under the same key in the browser.
-              </strong>
+              <strong> {t("validators.customMode")}</strong>
             ) : null}
           </p>
           <SchemaForm
-            label="Params"
+            label={t("validators.params")}
             schema={info.paramsSchema}
             value={binding.params}
             errors={errors.params}
             onChange={(params) => patch({ params })}
           />
           <fieldset className="vqe-fieldset vqe-fieldset--tight">
-            <legend className="vqe-fieldset__legend">Messages</legend>
+            <legend className="vqe-fieldset__legend">{t("validators.messages")}</legend>
             {info.errorKeys.map((error) => (
               <TextInput
                 key={error.key}
@@ -854,12 +878,14 @@ function ValidatorRow({
 // ------------------------------------------------------------------- shared
 
 function KeyAndTitle({
+  t,
   keyValue,
   title,
   errors,
   onKey,
   onTitle,
 }: {
+  t: Translate
   keyValue: string
   title: string
   errors: Record<string, string[]>
@@ -869,7 +895,7 @@ function KeyAndTitle({
   return (
     <div className="vqe-row">
       <TextInput
-        label="Title"
+        label={t("field.title")}
         value={title}
         errors={errors.title}
         onChange={(next) => {
@@ -884,8 +910,8 @@ function KeyAndTitle({
         }}
       />
       <TextInput
-        label="Key"
-        hint={KEY_HINT}
+        label={t("field.key")}
+        hint={t("field.keyHint")}
         monospace
         value={keyValue}
         errors={errors.key}
@@ -896,20 +922,22 @@ function KeyAndTitle({
 }
 
 function ConditionField({
+  t,
   value,
   errors,
   onChange,
 }: {
+  t: Translate
   value: string
   errors?: string[]
   onChange: (value: string) => void
 }) {
   return (
     <TextInput
-      label="Condition"
-      hint="A JMESPath expression over the answers so far. Empty always applies."
+      label={t("field.condition")}
+      hint={t("field.conditionHint")}
       monospace
-      placeholder="e.g. has_company"
+      placeholder={t("field.conditionPlaceholder")}
       value={value}
       errors={errors}
       onChange={onChange}
@@ -918,6 +946,7 @@ function ConditionField({
 }
 
 function ColumnsField({
+  t,
   label,
   hint,
   document,
@@ -926,6 +955,7 @@ function ColumnsField({
   errors,
   dispatch,
 }: {
+  t: Translate
   label: string
   hint: string
   document: QuestionnaireDefinition
@@ -945,7 +975,7 @@ function ColumnsField({
             key={range.key}
             label={range.label || range.key}
             min={1}
-            placeholder="inherit"
+            placeholder={t("field.columns.inherit")}
             value={columns[range.key] ?? null}
             errors={errors[range.key]}
             onChange={(value) =>
@@ -964,12 +994,14 @@ function ColumnsField({
 }
 
 function MinimumColumnsField({
+  t,
   document,
   question,
   path,
   errors,
   dispatch,
 }: {
+  t: Translate
   document: QuestionnaireDefinition
   question: QuestionDefinition
   path: QuestionPath
@@ -979,17 +1011,15 @@ function MinimumColumnsField({
   if (!document.windowSizeRanges.length) return null
   return (
     <fieldset className="vqe-fieldset vqe-fieldset--tight">
-      <legend className="vqe-fieldset__legend">Minimum columns</legend>
-      <p className="vqe-form__hint">
-        The narrowest this question may be rendered in each range. Empty takes the default.
-      </p>
+      <legend className="vqe-fieldset__legend">{t("question.minimumColumns")}</legend>
+      <p className="vqe-form__hint">{t("question.minimumColumnsHint")}</p>
       <div className="vqe-row">
         {document.windowSizeRanges.map((range) => (
           <NumberInput
             key={range.key}
             label={range.label || range.key}
             min={1}
-            placeholder="default"
+            placeholder={t("question.minimumColumnsPlaceholder")}
             value={question.minimumColumns[range.key] ?? null}
             errors={errors[range.key]}
             onChange={(value) =>
@@ -1007,10 +1037,10 @@ function MinimumColumnsField({
   )
 }
 
-function RemoveButton({ label, onRemove }: { label: string; onRemove: () => void }) {
+function RemoveButton({ title, onRemove }: { title: string; onRemove: () => void }) {
   return (
     <span className="vqe-item-controls">
-      <button type="button" title={`Remove this ${label}`} onClick={onRemove}>
+      <button type="button" title={title} onClick={onRemove}>
         ×
       </button>
     </span>

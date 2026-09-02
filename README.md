@@ -728,6 +728,55 @@ return JsonResponse(questionnaire_plan(version))
 Both sides replay `shared/conformance-cases.json`, so a rule that behaves
 differently in the browser than on the server fails CI.
 
+### Speaking another language
+
+Both halves are translatable, by different means, because they answer to
+different owners.
+
+**The server** uses Django's own framework. Everything it says -- the admin,
+the model field names and help text, the errors the API returns, and every
+validator's message -- goes through `gettext_lazy`, so a language is a
+catalogue rather than a patch:
+
+```bash
+cd vinta_django_questionnaires
+DJANGO_SETTINGS_MODULE=example.settings \
+  uv run django-admin makemessages -l pt_BR --no-obsolete
+# translate locale/pt_BR/LC_MESSAGES/django.po, then
+DJANGO_SETTINGS_MODULE=example.settings uv run django-admin compilemessages
+```
+
+The app ships no catalogue of its own yet; see
+[`vinta_django_questionnaires/locale/README.md`](vinta_django_questionnaires/locale/README.md).
+A host project needs `USE_I18N`, `LocaleMiddleware` and its own `LANGUAGES` --
+nothing specific to this app.
+
+**The browser** gets no i18n dependency, because the choice of one belongs to
+the project rather than to a library it installs. The React editor holds every
+word it says in a flat key/value catalogue and takes a replacement as a prop:
+
+```tsx
+<QuestionnaireEditor
+  api={api}
+  questionnaire="intake"
+  version={2}
+  strings={{ "editor.save": "Salvar", "field.title": "Título" }}
+/>
+```
+
+Anything left out stays English, so a catalogue can be filled in over time. Most
+entries are a plain string; the twenty-two that need something the editor only
+knows as it renders are functions, which is what lets a project hand the whole
+sentence to whichever i18n library it already has, plurals and all, rather than
+to a formatter of ours. The compiler asks for whichever form a key is. See
+[client/README.md](client/README.md#speaking-another-language).
+
+What the *respondent* sees when an answer fails needs none of this. Those
+messages are templates the server sends down in the plan, already translated by
+Django, and the client only fills in their placeholders -- so a questionnaire
+speaks whatever language the server was asked in, whichever front end renders
+it.
+
 
 ## Development
 

@@ -107,6 +107,18 @@ export {
 } from "./diagnostics.js"
 export { formatMessage } from "./message.js"
 export {
+  defaultStrings,
+  resolveStrings,
+  translate,
+  translator,
+  type ParamsOf,
+  type QuestionnaireStrings,
+  type StringFunction,
+  type StringKey,
+  type StringOverrides,
+  type Translate,
+} from "./strings.js"
+export {
   SUPPORTED_PLAN_VERSION,
   isCustomCheck,
   type CustomCheck,

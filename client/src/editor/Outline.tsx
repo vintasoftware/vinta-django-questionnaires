@@ -20,15 +20,18 @@ import {
 } from "../editorState.js"
 import { DragHandle, SortableItem, SortableList, type HandleProps } from "./Sortable.js"
 import { Button } from "./fields.js"
+import { useStrings, type WithStrings } from "./strings.js"
+import type { Translate } from "../strings.js"
 
-export interface OutlineProps {
+export interface OutlineProps extends WithStrings {
   document: QuestionnaireDefinition
   selection: Selection
   issues: readonly DefinitionIssue[]
   dispatch: (action: EditorAction) => void
 }
 
-export function Outline({ document, selection, issues, dispatch }: OutlineProps) {
+export function Outline({ document, selection, issues, dispatch, strings }: OutlineProps) {
+  const t = useStrings(strings)
   const selected = pathOf(selection)
   const isSelected = (path: NodePath | null) =>
     path === null ? selection.kind === "version" : pathOf(path) === selected
@@ -41,7 +44,7 @@ export function Outline({ document, selection, issues, dispatch }: OutlineProps)
     // the inner element is the one that sticks. A single element cannot do
     // both -- something pinned needs slack to move within, which a full-height
     // element has none of, so the two demands would cancel out.
-    <nav className="vqe-outline" aria-label="Questionnaire outline">
+    <nav className="vqe-outline" aria-label={t("outline.label")}>
       <div className="vqe-outline__pane">
         <button
           type="button"
@@ -57,9 +60,11 @@ export function Outline({ document, selection, issues, dispatch }: OutlineProps)
         </button>
 
         <SortableList
-          label="pages"
+          label={t("outline.list.pages")}
           ids={document.pages.map((_page, index) => `page-${index}`)}
-          names={document.pages.map((page) => page.title || page.key || "untitled page")}
+          names={document.pages.map(
+            (page) => page.title || page.key || t("outline.untitled.page"),
+          )}
           onReorder={reorder(null)}
         >
           <ol className="vqe-outline__list">
@@ -71,11 +76,12 @@ export function Outline({ document, selection, issues, dispatch }: OutlineProps)
                     <li>
                       <Row
                         handle={handle}
+                        t={t}
                         kind="page"
                         label={page.title || page.key}
                         badges={[
-                          page.isSkippable ? "skippable" : null,
-                          page.condition ? "conditional" : null,
+                          page.isSkippable ? t("outline.badge.skippable") : null,
+                          page.condition ? t("outline.badge.conditional") : null,
                         ]}
                         selected={isSelected(pagePath)}
                         flagged={hasIssuesUnder(issues, pathOf(pagePath))}
@@ -88,10 +94,11 @@ export function Outline({ document, selection, issues, dispatch }: OutlineProps)
                         onRemove={() => dispatch({ type: "remove", path: pagePath })}
                       />
                       <SortableList
-                        label="sections"
+                        label={t("outline.list.sections")}
                         ids={page.sections.map((_section, index) => `section-${index}`)}
                         names={page.sections.map(
-                          (section) => section.title || section.key || "untitled section",
+                          (section) =>
+                            section.title || section.key || t("outline.untitled.section"),
                         )}
                         onReorder={reorder(pagePath)}
                       >
@@ -110,9 +117,14 @@ export function Outline({ document, selection, issues, dispatch }: OutlineProps)
                                   <li>
                                     <Row
                                       handle={sectionHandle}
+                                      t={t}
                                       kind="section"
                                       label={section.title || section.key}
-                                      badges={[section.condition ? "conditional" : null]}
+                                      badges={[
+                                        section.condition
+                                          ? t("outline.badge.conditional")
+                                          : null,
+                                      ]}
                                       selected={isSelected(sectionPath)}
                                       flagged={hasIssuesUnder(issues, pathOf(sectionPath))}
                                       onSelect={() =>
@@ -132,13 +144,15 @@ export function Outline({ document, selection, issues, dispatch }: OutlineProps)
                                       }
                                     />
                                     <SortableList
-                                      label="questions"
+                                      label={t("outline.list.questions")}
                                       ids={section.questions.map(
                                         (_question, index) => `question-${index}`,
                                       )}
                                       names={section.questions.map(
                                         (question) =>
-                                          question.title || question.key || "untitled question",
+                                          question.title ||
+                                          question.key ||
+                                          t("outline.untitled.question"),
                                       )}
                                       onReorder={reorder(sectionPath)}
                                     >
@@ -158,11 +172,14 @@ export function Outline({ document, selection, issues, dispatch }: OutlineProps)
                                                 <li>
                                                   <Row
                                                     handle={questionHandle}
+                                                    t={t}
                                                     kind="question"
                                                     label={question.title || question.key}
                                                     badges={[
                                                       question.questionType,
-                                                      question.condition ? "conditional" : null,
+                                                      question.condition
+                                                        ? t("outline.badge.conditional")
+                                                        : null,
                                                     ]}
                                                     selected={isSelected(questionPath)}
                                                     flagged={hasIssuesUnder(
@@ -197,10 +214,11 @@ export function Outline({ document, selection, issues, dispatch }: OutlineProps)
                                               dispatch({
                                                 type: "insert",
                                                 path: sectionPath,
+                                                title: t("editor.new.question"),
                                               })
                                             }
                                           >
-                                            + Question
+                                            {t("outline.add.question")}
                                           </Button>
                                         </li>
                                       </ol>
@@ -213,9 +231,15 @@ export function Outline({ document, selection, issues, dispatch }: OutlineProps)
                           <li>
                             <Button
                               variant="quiet"
-                              onClick={() => dispatch({ type: "insert", path: pagePath })}
+                              onClick={() =>
+                                dispatch({
+                                  type: "insert",
+                                  path: pagePath,
+                                  title: t("editor.new.section"),
+                                })
+                              }
                             >
-                              + Section
+                              {t("outline.add.section")}
                             </Button>
                           </li>
                         </ol>
@@ -228,8 +252,11 @@ export function Outline({ document, selection, issues, dispatch }: OutlineProps)
           </ol>
         </SortableList>
 
-        <Button variant="quiet" onClick={() => dispatch({ type: "insert", path: null })}>
-          + Page
+        <Button
+          variant="quiet"
+          onClick={() => dispatch({ type: "insert", path: null, title: t("editor.new.page") })}
+        >
+          {t("outline.add.page")}
         </Button>
       </div>
     </nav>
@@ -238,6 +265,7 @@ export function Outline({ document, selection, issues, dispatch }: OutlineProps)
 
 function Row({
   handle,
+  t,
   kind,
   label,
   badges,
@@ -247,7 +275,11 @@ function Row({
   onRemove,
 }: {
   handle: HandleProps
-  kind: string
+  t: Translate
+  // Narrow, because each kind has a name and a delete title of its own in the
+  // catalogue rather than a noun glued onto a sentence -- a composition that
+  // only reads as English.
+  kind: "page" | "section" | "question"
   label: string
   badges: (string | null)[]
   selected: boolean
@@ -255,17 +287,18 @@ function Row({
   onSelect: () => void
   onRemove: () => void
 }) {
+  const name = t(`outline.item.${kind}`, { label: label || t("outline.untitled") })
   return (
     <div className={`vqe-outline__row${selected ? " is-selected" : ""}`}>
-      <DragHandle handle={handle} label={`${kind} ${label || "untitled"}`} />
+      <DragHandle handle={handle} label={name} />
       <button type="button" className="vqe-outline__button" onClick={onSelect}>
         <span className="vqe-outline__title">
           {flagged ? (
-            <span className="vqe-outline__flag" aria-label="Has a problem">
+            <span className="vqe-outline__flag" aria-label={t("outline.flag")}>
               !
             </span>
           ) : null}
-          {label || "Untitled"}
+          {label || t("outline.untitled")}
         </span>
         <span className="vqe-outline__badges">
           {badges.filter(Boolean).map((badge) => (
@@ -276,7 +309,7 @@ function Row({
         </span>
       </button>
       <span className="vqe-outline__controls">
-        <button type="button" title={`Delete this ${kind}`} onClick={onRemove}>
+        <button type="button" title={t(`outline.delete.${kind}`)} onClick={onRemove}>
           ×
         </button>
       </span>

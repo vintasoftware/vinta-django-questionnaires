@@ -5,7 +5,8 @@
 {% endcomment %}
 <div class="vqa-item{% if not form.instance.pk %} vqa-item--new{% endif %}">
   <div class="vqa-row vqa-row--item">
-    <span class="vqa-row__grip" data-vqa-handle title="{% translate 'Drag to reorder' %}" aria-hidden="true">⠿</span>
+    <span class="vqa-row__grip" data-vqa-handle="{% translate 'Reorder, with the arrow keys' %}"
+      title="{% translate 'Drag to reorder' %}" aria-hidden="true">⠿</span>
     <span class="vqa-row__fields">
       {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
       {% for field in form.summary %}

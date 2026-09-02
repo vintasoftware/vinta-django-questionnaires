@@ -11,6 +11,8 @@
 import { useEffect, useState } from "react"
 
 import { Checkbox, NumberInput, Select, TextArea, TextInput } from "./fields.js"
+import { useStrings, type WithStrings } from "./strings.js"
+import type { Translate } from "../strings.js"
 
 interface Schema {
   type?: string | string[]
@@ -23,7 +25,7 @@ interface Schema {
   default?: unknown
 }
 
-export interface SchemaFormProps {
+export interface SchemaFormProps extends WithStrings {
   schema: Record<string, unknown> | null | undefined
   value: Record<string, unknown>
   onChange: (value: Record<string, unknown>) => void
@@ -32,7 +34,15 @@ export interface SchemaFormProps {
   label: string
 }
 
-export function SchemaForm({ schema, value, onChange, errors, label }: SchemaFormProps) {
+export function SchemaForm({
+  schema,
+  value,
+  onChange,
+  errors,
+  label,
+  strings,
+}: SchemaFormProps) {
+  const t = useStrings(strings)
   const parsed = (schema ?? {}) as Schema
   const properties = parsed.properties ?? {}
   const names = Object.keys(properties)
@@ -44,7 +54,7 @@ export function SchemaForm({ schema, value, onChange, errors, label }: SchemaFor
         value={value}
         onChange={(next) => onChange((next ?? {}) as Record<string, unknown>)}
         errors={errors}
-        hint="This one declares no properties, so it is edited as JSON."
+        hint={t("schemaForm.jsonOnly")}
       />
     )
   }
@@ -56,6 +66,7 @@ export function SchemaForm({ schema, value, onChange, errors, label }: SchemaFor
       {names.map((name) => (
         <SchemaField
           key={name}
+          t={t}
           name={name}
           schema={properties[name] as Schema}
           required={required.has(name)}
@@ -80,19 +91,22 @@ export function SchemaForm({ schema, value, onChange, errors, label }: SchemaFor
 }
 
 function SchemaField({
+  t,
   name,
   schema,
   required,
   value,
   onChange,
 }: {
+  t: Translate
   name: string
   schema: Schema
   required: boolean
   value: unknown
   onChange: (value: unknown) => void
 }) {
-  const label = `${schema.title ?? name}${required ? " *" : ""}`
+  const own = schema.title ?? name
+  const label = required ? t("schemaForm.required", { label: own }) : own
   const hint = schema.description
   const kind = Array.isArray(schema.type) ? schema.type[0] : schema.type
 
@@ -102,7 +116,7 @@ function SchemaField({
         label={label}
         hint={hint}
         value={value === undefined || value === null ? "" : String(value)}
-        emptyLabel={required ? undefined : "--"}
+        emptyLabel={required ? undefined : t("field.empty")}
         options={schema.enum.map((entry) => ({ value: String(entry), label: String(entry) }))}
         onChange={(next) => onChange(next === "" ? undefined : next)}
       />
@@ -131,10 +145,17 @@ function SchemaField({
       />
     )
   }
-  return <JsonField label={label} hint={hint ?? "JSON."} value={value} onChange={onChange} />
+  return (
+    <JsonField
+      label={label}
+      hint={hint ?? t("schemaForm.jsonHint")}
+      value={value}
+      onChange={onChange}
+    />
+  )
 }
 
-export interface JsonFieldProps {
+export interface JsonFieldProps extends WithStrings {
   label: string
   value: unknown
   onChange: (value: unknown) => void
@@ -150,7 +171,16 @@ export interface JsonFieldProps {
  * does not parse and losing what someone is in the middle of writing is worse
  * than showing them a parse error.
  */
-export function JsonField({ label, value, onChange, hint, errors, rows = 4 }: JsonFieldProps) {
+export function JsonField({
+  label,
+  value,
+  onChange,
+  hint,
+  errors,
+  rows = 4,
+  strings,
+}: JsonFieldProps) {
+  const t = useStrings(strings)
   const serialised = value === undefined ? "" : JSON.stringify(value, null, 2)
   const [text, setText] = useState(serialised)
   const [parseError, setParseError] = useState<string | null>(null)
@@ -190,7 +220,7 @@ export function JsonField({ label, value, onChange, hint, errors, rows = 4 }: Js
           setParseError(null)
           onChange(parsed)
         } catch (error) {
-          setParseError(error instanceof Error ? error.message : "This is not valid JSON.")
+          setParseError(error instanceof Error ? error.message : t("schemaForm.invalidJson"))
         }
       }}
     />
