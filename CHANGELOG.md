@@ -7,6 +7,9 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+
+## [0.4.0] - 2026-09-07
+
 The client package can render a questionnaire now, not only validate one, and
 the editor shows what it renders. Both halves of the layout model -- how many
 columns a layer's grid has, and how many of them a question takes -- were
@@ -45,8 +48,10 @@ them, which is what made them feel absent.
   rendered through the same registry, at the real width of whichever breakpoint
   is picked, with the grid guides on. It renders from `planFromDefinition`
   rather than from a fetched plan, so it follows the keystroke rather than the
-  save, and it can narrow to whatever the outline has selected. `showsPreview`
-  starts it closed; the bar has a button either way.
+  save, and it can narrow to whatever the outline has selected. The pane is open
+  by default, so an editor already embedded somewhere gains a third column on
+  upgrade; `showsPreview={false}` starts it closed, and the bar has a button for
+  it either way.
 
   **Use the full width** hands the preview the editor's whole width and puts the
   outline and the inspector away. A third of a screen cannot show a desktop
@@ -572,6 +577,7 @@ step. Everything below is the npm package or the release plumbing.
   submission layer and reported to the client as a `policy` block on every
   response payload.
 
+[0.4.0]: https://github.com/vintasoftware/vinta-django-questionnaires/releases/tag/v0.4.0
 [0.3.0]: https://github.com/vintasoftware/vinta-django-questionnaires/releases/tag/v0.3.0
 [0.2.3]: https://github.com/vintasoftware/vinta-django-questionnaires/releases/tag/v0.2.3
 [0.2.2]: https://github.com/vintasoftware/vinta-django-questionnaires/releases/tag/v0.2.2
