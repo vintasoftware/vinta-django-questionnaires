@@ -1,0 +1,180 @@
+/**
+ * The playground's own chrome, which is not the package's.
+ *
+ * Kept visibly plainer than what it frames, and prefixed `pg-` rather than
+ * `vqe-`/`vqf-`, so there is never a question about whether something on screen
+ * came from the package or from the harness around it.
+ */
+
+.pg {
+  --pg-bg: #e9ebef;
+  --pg-bar: #ffffff;
+  --pg-border: #c9cdd6;
+  --pg-text: #16191f;
+  --pg-muted: #545b66;
+  --pg-accent: #1c4fd8;
+
+  min-height: 100vh;
+  background: var(--pg-bg);
+  color: var(--pg-text);
+  display: flex;
+  flex-direction: column;
+}
+
+.pg[data-theme="dark"] {
+  --pg-bg: #0d1014;
+  --pg-bar: #191d24;
+  --pg-border: #333b46;
+  --pg-text: #eef1f5;
+  --pg-muted: #a8b0bc;
+  --pg-accent: #7ea6ff;
+}
+
+.pg * {
+  box-sizing: border-box;
+}
+
+.pg :focus-visible {
+  outline: 2px solid var(--pg-accent);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------------ the bar */
+
+.pg__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 0.75rem;
+  background: var(--pg-bar);
+  border-bottom: 1px solid var(--pg-border);
+}
+
+.pg__tabs {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.pg__tab {
+  font: inherit;
+  font-size: 0.875rem;
+  border: 1px solid transparent;
+  background: none;
+  color: var(--pg-muted);
+  padding: 0.3125rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.pg__tab.is-selected {
+  color: var(--pg-text);
+  border-color: var(--pg-border);
+  background: var(--pg-bg);
+  font-weight: 600;
+}
+
+.pg__controls {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.pg__control {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  color: var(--pg-muted);
+  cursor: pointer;
+}
+
+.pg__control input[type="checkbox"] {
+  accent-color: var(--pg-accent);
+  margin: 0;
+}
+
+.pg__control code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+}
+
+.pg__readout {
+  font-variant-numeric: tabular-nums;
+  min-width: 4rem;
+}
+
+/* --------------------------------------------------------- the form on show */
+
+/* No scaling here, unlike the editor's preview: the slider sets a real width
+   and the page scrolls if it does not fit. Seeing the form at its true size is
+   the one thing this tab offers that the preview cannot. */
+.pg__stage {
+  flex: 1;
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: 1.25rem;
+  overflow: auto;
+}
+
+.pg__sheet {
+  flex: 0 0 auto;
+  max-width: 100%;
+  background: var(--pg-bar);
+  border: 1px solid var(--pg-border);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.pg[data-theme="dark"] .pg__sheet .vqf {
+  --vqe-surface: #191d24;
+  --vqe-surface-sunken: #22272f;
+  --vqe-border: #333b46;
+  --vqe-text: #eef1f5;
+  --vqe-text-muted: #a8b0bc;
+  --vqe-accent: #7ea6ff;
+  --vqe-danger: #ff9a9f;
+}
+
+.pg__answers {
+  flex: 0 1 22rem;
+  margin: 0;
+  padding: 0.75rem;
+  background: var(--pg-bar);
+  border: 1px solid var(--pg-border);
+  border-radius: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+  color: var(--pg-muted);
+  white-space: pre-wrap;
+  position: sticky;
+  top: 0;
+}
+
+/* --------------------------------------------- the stand-in for a real widget */
+
+.pg-loud {
+  display: flex;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+
+.pg-loud__option {
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border: 2px solid var(--pg-accent);
+  background: none;
+  color: var(--pg-accent);
+  border-radius: 999px;
+  padding: 0.25rem 0.875rem;
+  cursor: pointer;
+}
+
+.pg-loud__option.is-chosen {
+  background: var(--pg-accent);
+  color: var(--pg-bar);
+}

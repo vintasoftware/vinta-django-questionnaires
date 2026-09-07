@@ -23,6 +23,17 @@ export {
   type UseQuestionnaireEditorOptions,
 } from "./useQuestionnaireEditor.js"
 export { Outline, type OutlineProps } from "./Outline.js"
+export { Preview, type PreviewProps } from "./Preview.js"
+export {
+  CellStrip,
+  NoRanges,
+  RangeStrips,
+  STANDARD_RANGES,
+  describeRange,
+  type CellStripProps,
+  type NoRangesProps,
+  type RangeStripsProps,
+} from "./ColumnPicker.js"
 export {
   QuestionnaireStringsProvider,
   useStringCatalog,

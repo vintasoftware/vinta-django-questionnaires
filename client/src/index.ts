@@ -83,6 +83,7 @@ export {
   pathOf,
   questionAt,
   sectionAt,
+  selectionFromPath,
   slugify,
   summariseIssues,
   uniqueKey,
@@ -106,6 +107,7 @@ export {
   type DiagnosticReporter,
 } from "./diagnostics.js"
 export { formatMessage } from "./message.js"
+export { planFromDefinition } from "./preview.js"
 export {
   defaultStrings,
   resolveStrings,

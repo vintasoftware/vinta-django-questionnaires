@@ -16,16 +16,32 @@
  * carries a `vqe-` class name -- so a project can restyle it entirely from its
  * own stylesheet, or skip it and build its own interface on the hook.
  *
+ * Three panes: what the questionnaire is made of, the settings of whatever is
+ * selected, and what a respondent will see. The third is not a luxury -- the
+ * layout model is column counts stored per breakpoint, which no arrangement of
+ * number fields makes legible, so the preview is where that half of the model
+ * is actually read. It can be closed for a narrow screen or a long form.
+ *
  * Every word it says comes from `strings`, so a project translates it by
  * passing a catalogue rather than by forking the component.
  */
 
 import { useState } from "react"
 
-import { pathOf, questionAt, sectionAt, pageAt, summariseIssues } from "../editorState.js"
+import {
+  pathOf,
+  questionAt,
+  sectionAt,
+  pageAt,
+  selectionFromPath,
+  summariseIssues,
+  type Selection,
+} from "../editorState.js"
+import type { DefinitionIssue } from "../definition.js"
 import type { EditorApi } from "../editorClient.js"
 import type { QuestionnaireDefinition } from "../definition.js"
 import { Outline } from "./Outline.js"
+import { Preview } from "./Preview.js"
 import { PageForm, QuestionForm, SectionForm, VersionForm } from "./forms.js"
 import { Button, Checkbox, TextInput } from "./fields.js"
 import {
@@ -46,11 +62,25 @@ export interface QuestionnaireEditorProps extends WithStrings {
   className?: string
   /** The editor's palette. Light unless the host says otherwise. */
   theme?: "light" | "dark"
+  /** Whether the preview pane starts open. It does. */
+  showsPreview?: boolean
 }
 
+/**
+ * How much of the editor the preview is taking.
+ *
+ * `wide` is not just a bigger pane -- it hands the preview the editor's whole
+ * width, so a desktop breakpoint renders at or near its real size instead of
+ * being scaled into a third of the screen. The outline and the inspector are
+ * gone while it is on, which is the point: nothing else needs to be visible to
+ * look at a form.
+ */
+type PreviewState = "closed" | "pane" | "wide"
+
 export function QuestionnaireEditor(props: QuestionnaireEditorProps) {
-  // The provider wraps the whole subtree, so the outline and the forms are
-  // translated by the same catalogue without being handed it one by one.
+  // The provider wraps the whole subtree, so the outline, the forms and the
+  // preview are translated by the same catalogue without being handed it one
+  // by one.
   return (
     <QuestionnaireStringsProvider strings={props.strings}>
       <Editor {...props} />
@@ -62,9 +92,12 @@ function Editor(props: QuestionnaireEditorProps) {
   const editor = useQuestionnaireEditor(props)
   const { state, dispatch, issues } = editor
   const t = useStrings()
-  const strings = useStringCatalog()
   const [reason, setReason] = useState("")
   const [understood, setUnderstood] = useState(false)
+  const [preview, setPreview] = useState<PreviewState>(
+    props.showsPreview === false ? "closed" : "pane",
+  )
+  const showsPreview = preview !== "closed"
 
   if (editor.isLoading) {
     return (
@@ -86,7 +119,11 @@ function Editor(props: QuestionnaireEditorProps) {
   const canSave = editor.isDirty && !editor.isSaving && (!gated || understood)
 
   return (
-    <div className={`vqe ${props.className ?? ""}`.trim()} data-vqe-theme={props.theme}>
+    <div
+      className={`vqe ${props.className ?? ""}`.trim()}
+      data-vqe-theme={props.theme}
+      data-vqe-preview={preview}
+    >
       <header className="vqe__bar">
         <div className="vqe__bar-title">
           <strong>{state.document.title || state.document.questionnaire.name}</strong>
@@ -97,6 +134,9 @@ function Editor(props: QuestionnaireEditorProps) {
           ) : null}
         </div>
         <div className="vqe__bar-actions">
+          <Button onClick={() => setPreview(showsPreview ? "closed" : "pane")}>
+            {t(showsPreview ? "preview.hide" : "preview.show")}
+          </Button>
           <Button onClick={() => editor.revert()} disabled={!editor.isDirty}>
             {t("editor.revert")}
           </Button>
@@ -147,16 +187,7 @@ function Editor(props: QuestionnaireEditorProps) {
       ) : null}
 
       {issues.length ? (
-        <section className="vqe__notice vqe__notice--error" role="alert">
-          <p>{t("editor.issues.heading", { count: issues.length })}</p>
-          <ul>
-            {summariseIssues(issues, strings)
-              .slice(0, 10)
-              .map((message, index) => (
-                <li key={index}>{message}</li>
-              ))}
-          </ul>
-        </section>
+        <IssueList issues={issues} onGoTo={(selection) => editor.select(selection)} />
       ) : null}
 
       <div className="vqe__body">
@@ -169,8 +200,65 @@ function Editor(props: QuestionnaireEditorProps) {
         <main className="vqe__inspector">
           <Inspector editor={editor} />
         </main>
+        {showsPreview ? (
+          <Preview
+            document={state.document}
+            catalog={editor.catalog}
+            selection={state.selection}
+            isWide={preview === "wide"}
+            onWide={(wide) => setPreview(wide ? "wide" : "pane")}
+          />
+        ) : null}
       </div>
     </div>
+  )
+}
+
+/**
+ * What is wrong, and a way to get to it.
+ *
+ * The list used to be flat text, which meant reading a path like
+ * `pages.0.sections.1.questions.2` and then finding that question by hand. Each
+ * row now selects the node it is about, which is the only thing anyone ever
+ * wanted to do with one.
+ */
+function IssueList({
+  issues,
+  onGoTo,
+}: {
+  issues: readonly DefinitionIssue[]
+  onGoTo: (selection: Selection) => void
+}) {
+  const t = useStrings()
+  const strings = useStringCatalog()
+  const shown = 8
+  const messages = summariseIssues(issues, strings)
+  // Paired positionally with the summaries: `summariseIssues` flattens each
+  // issue into one line per message, so the same flattening gives the path.
+  const paths = issues.flatMap((issue) =>
+    Object.values(issue.errors).flatMap((entries) => entries.map(() => issue.path)),
+  )
+
+  return (
+    <section className="vqe__notice vqe__notice--error" role="alert">
+      <p>{t("editor.issues.heading", { count: messages.length })}</p>
+      <ul className="vqe-issues">
+        {messages.slice(0, shown).map((message, index) => (
+          <li key={index}>
+            <button
+              type="button"
+              className="vqe-issues__go"
+              onClick={() => onGoTo(selectionFromPath(paths[index] ?? ""))}
+            >
+              {message}
+            </button>
+          </li>
+        ))}
+      </ul>
+      {messages.length > shown ? (
+        <p className="vqe-form__hint">{t("issues.more", { count: messages.length - shown })}</p>
+      ) : null}
+    </section>
   )
 }
 

@@ -1,0 +1,462 @@
+/**
+ * The rendered questionnaire's own stylesheet.
+ *
+ * Separate from `editor.css` because the two are used apart: a project renders
+ * a questionnaire to respondents without ever loading the editor, and the
+ * editor's preview loads both. Every colour is a custom property and every
+ * class is prefixed `vqf-`, so a host restyles it from its own design system
+ * or drops the file and starts from the class names.
+ *
+ * It inherits the editor's tokens when it is inside one, and defines its own
+ * when it is not, so a preview and a live form look like the same thing.
+ */
+
+.vqf {
+  --vqf-surface: var(--vqe-surface, #ffffff);
+  --vqf-sunken: var(--vqe-surface-sunken, #f5f6f8);
+  --vqf-border: var(--vqe-border, #d3d7de);
+  --vqf-text: var(--vqe-text, #16191f);
+  --vqf-muted: var(--vqe-text-muted, #4f5661);
+  --vqf-accent: var(--vqe-accent, #1c4fd8);
+  --vqf-danger: var(--vqe-danger, #a3161d);
+  /* The grid's own colour. Deliberately not the accent: a column guide is a
+     measurement, and reading as a brand mark would make it look clickable. */
+  --vqf-rule: color-mix(in srgb, var(--vqf-accent) 22%, transparent);
+  --vqf-radius: var(--vqe-radius, 6px);
+  --vqf-columns: 12;
+
+  color: var(--vqf-text);
+  background: var(--vqf-surface);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  container-type: inline-size;
+}
+
+.vqf *,
+.vqf *::before,
+.vqf *::after {
+  box-sizing: border-box;
+}
+
+.vqf :focus-visible {
+  outline: 2px solid var(--vqf-accent);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------- the heading */
+
+.vqf__header {
+  padding: 0 0 1rem;
+  border-bottom: 1px solid var(--vqf-border);
+  margin-bottom: 1.5rem;
+}
+
+.vqf__title {
+  margin: 0;
+  font-size: 1.375rem;
+  line-height: 1.25;
+  font-weight: 620;
+  letter-spacing: -0.011em;
+}
+
+.vqf__description {
+  margin: 0.375rem 0 0;
+  color: var(--vqf-muted);
+  max-width: 62ch;
+}
+
+/* --------------------------------------------------------- pages, sections */
+
+.vqf-page + .vqf-page {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--vqf-border);
+}
+
+.vqf-page__header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.vqf-page__title {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+.vqf-page__description,
+.vqf-section__description {
+  margin: 0.25rem 0 0.875rem;
+  color: var(--vqf-muted);
+  max-width: 62ch;
+}
+
+.vqf-page__conclusion,
+.vqf-section__conclusion {
+  margin: 0.875rem 0 0;
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--vqf-border);
+  color: var(--vqf-muted);
+  max-width: 62ch;
+}
+
+.vqf-section {
+  margin-top: 1.25rem;
+}
+
+.vqf-section__summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  padding: 0.25rem 0;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  list-style: none;
+}
+
+.vqf-section__summary::-webkit-details-marker {
+  display: none;
+}
+
+/* The disclosure triangle, drawn rather than borrowed, so it turns with the
+   section on every browser instead of only the ones that style the marker. */
+.vqf-section__summary::before {
+  content: "";
+  width: 0;
+  height: 0;
+  border-left: 5px solid currentColor;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: transform 120ms ease;
+  flex: 0 0 auto;
+  color: var(--vqf-muted);
+}
+
+.vqf-section[open] > .vqf-section__summary::before {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vqf-section__summary::before {
+    transition: none;
+  }
+}
+
+/* ---------------------------------------------------------------- the grid */
+
+.vqf-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--vqf-columns), minmax(0, 1fr));
+  gap: 1rem 1.25rem;
+  align-items: start;
+  padding: 0.25rem 0;
+}
+
+.vqf-cell {
+  grid-column: span min(var(--vqf-span), var(--vqf-columns));
+  min-width: 0;
+}
+
+/* The column guides. On only where someone asked to see them -- the editor's
+   preview -- because a respondent has no use for the grid, only for what sits
+   on it. Drawn behind the fields rather than over them, and unreachable by the
+   pointer, so showing the grid changes nothing about using the form. */
+.vqf-grid--shown {
+  position: relative;
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--vqf-rule) 0,
+    var(--vqf-rule) 1px,
+    transparent 1px,
+    transparent calc(100% / var(--vqf-columns))
+  );
+  background-position: 0 0;
+  padding: 0.75rem 0;
+}
+
+.vqf-grid--shown .vqf-cell {
+  outline: 1px dashed var(--vqf-rule);
+  outline-offset: 4px;
+}
+
+/* Below the narrowest useful width every question takes the whole row: a form
+   laid out in twelve columns on a phone is twelve unreadable columns. */
+@container (max-width: 30rem) {
+  .vqf-cell {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ------------------------------------------------------------- a question */
+
+.vqf-question {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3125rem;
+  min-width: 0;
+}
+
+.vqf-question__label {
+  font-weight: 560;
+  font-size: 0.875rem;
+  line-height: 1.35;
+}
+
+.vqf-required {
+  color: var(--vqf-danger);
+  margin-left: 0.125rem;
+}
+
+.vqf-question__description {
+  margin: 0;
+  color: var(--vqf-muted);
+  font-size: 0.8125rem;
+  max-width: 62ch;
+}
+
+.vqf-question__errors {
+  margin: 0.125rem 0 0;
+  padding-left: 1.1rem;
+  color: var(--vqf-danger);
+  font-size: 0.8125rem;
+}
+
+.vqf-question--invalid .vqf-input,
+.vqf-question--invalid .vqf-matrix {
+  border-color: var(--vqf-danger);
+}
+
+.vqf-unrendered {
+  margin: 0;
+  padding: 0.5rem 0.625rem;
+  border: 1px dashed var(--vqf-border);
+  border-radius: var(--vqf-radius);
+  color: var(--vqf-muted);
+  font-size: 0.8125rem;
+}
+
+.vqf-empty {
+  margin: 0;
+  color: var(--vqf-muted);
+  font-size: 0.8125rem;
+  font-style: italic;
+}
+
+/* ---------------------------------------------------------------- controls */
+
+.vqf-input {
+  font: inherit;
+  color: var(--vqf-text);
+  background: var(--vqf-surface);
+  border: 1px solid var(--vqf-border);
+  border-radius: var(--vqf-radius);
+  padding: 0.4375rem 0.5625rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.vqf-input:disabled {
+  background: var(--vqf-sunken);
+  color: var(--vqf-muted);
+}
+
+.vqf-textarea {
+  resize: vertical;
+}
+
+.vqf-select--multiple {
+  padding: 0.25rem;
+}
+
+.vqf-affixed {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.vqf-affix {
+  color: var(--vqf-muted);
+  font-size: 0.875rem;
+  flex: 0 0 auto;
+}
+
+.vqf-radio,
+.vqf-checkbox {
+  accent-color: var(--vqf-accent);
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.vqf-options {
+  display: flex;
+  gap: 0.5rem 1.25rem;
+}
+
+.vqf-options--column {
+  flex-direction: column;
+}
+
+.vqf-options--row {
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+.vqf-options--grid {
+  --vqf-option-columns: 1;
+  display: grid;
+  grid-template-columns: repeat(var(--vqf-option-columns), minmax(0, 1fr));
+}
+
+.vqf-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.vqf-option--other {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.375rem;
+  cursor: default;
+}
+
+.vqf-range {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.vqf-range > .vqf-part {
+  flex: 1 1 9rem;
+}
+
+.vqf-part {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.vqf-part__label {
+  font-size: 0.75rem;
+  color: var(--vqf-muted);
+}
+
+.vqf-file__list {
+  margin: 0.375rem 0 0;
+  padding-left: 1.1rem;
+  color: var(--vqf-muted);
+  font-size: 0.8125rem;
+}
+
+/* ------------------------------------------------------------------ matrix */
+
+.vqf-matrix {
+  border-collapse: collapse;
+  border: 1px solid var(--vqf-border);
+  border-radius: var(--vqf-radius);
+  width: 100%;
+  font-size: 0.875rem;
+}
+
+.vqf-matrix th,
+.vqf-matrix td {
+  border: 1px solid var(--vqf-border);
+  padding: 0.375rem 0.5rem;
+  text-align: center;
+}
+
+.vqf-matrix th[scope="row"] {
+  text-align: left;
+  font-weight: 500;
+}
+
+.vqf-matrix thead th {
+  background: var(--vqf-sunken);
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------------- repeatables */
+
+.vqf-repeater {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  align-items: flex-start;
+}
+
+.vqf-repeater__entry {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  width: 100%;
+  border-left: 2px solid var(--vqf-border);
+  padding-left: 0.75rem;
+}
+
+.vqf-repeater__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.vqf-repeater__remove {
+  border: 1px solid transparent;
+  background: none;
+  color: var(--vqf-muted);
+  cursor: pointer;
+  border-radius: var(--vqf-radius);
+  padding: 0.125rem 0.375rem;
+  font-size: 0.875rem;
+  line-height: 1.2;
+  flex: 0 0 auto;
+}
+
+.vqf-repeater__remove:hover:not(:disabled) {
+  color: var(--vqf-text);
+  border-color: var(--vqf-border);
+}
+
+.vqf-repeater__add {
+  font: inherit;
+  font-size: 0.875rem;
+  border: 1px dashed var(--vqf-border);
+  background: none;
+  color: var(--vqf-muted);
+  border-radius: var(--vqf-radius);
+  padding: 0.3125rem 0.75rem;
+  cursor: pointer;
+}
+
+.vqf-repeater__add:hover:not(:disabled) {
+  color: var(--vqf-text);
+  border-style: solid;
+}
+
+.vqf-repeater__add:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.vqf-nested {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+/* -------------------------------------------------------------------- tags */
+
+.vqf-tag {
+  display: inline-block;
+  border: 1px solid var(--vqf-border);
+  border-radius: 999px;
+  padding: 0 0.5rem;
+  font-size: 0.6875rem;
+  color: var(--vqf-muted);
+  white-space: nowrap;
+}

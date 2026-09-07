@@ -55,6 +55,8 @@ export interface QuestionPlan {
   itemType?: string
   choices?: ChoicePlan[]
   allowsOther?: boolean
+  /** What the "other" escape hatch is called, when the author named it. */
+  otherLabel?: string
   matrix?: { rows: ChoicePlan[]; columns: ChoicePlan[] }
   valueSet?: ValueSetRef
   subQuestionnaire?:

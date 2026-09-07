@@ -7,6 +7,166 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+The client package can render a questionnaire now, not only validate one, and
+the editor shows what it renders. Both halves of the layout model -- how many
+columns a layer's grid has, and how many of them a question takes -- were
+already stored and already round-tripped; what was missing was any way to see
+them, which is what made them feel absent.
+
+### Added
+
+- **Default widgets, and a registry to replace them.** The client ships a
+  working component for every question type and for every widget key the new
+  default set installs, so a plan renders as soon as it is fetched. None of them
+  are meant to survive contact with a real design system: a project claims a key
+  with `registerWidget` and its component is used instead, in the form and in
+  the editor's preview alike. `unregisterWidget` puts the shipped one back
+  rather than leaving a hole.
+
+  New entry point: `vinta-django-questionnaires-client/widgets`, with
+  `widgets.css` beside it.
+
+- **`QuestionnaireView`, which lays a plan out on its grid.** It decides which
+  window size range a width falls in, resolves each layer's column count through
+  the inheritance the server describes, and packs every section's questions into
+  rows -- honouring `requiresBeingFirstInARow` and `requiresBeingLastInARow`,
+  which nothing on the client had ever done anything with.
+
+- **`manage.py install_default_widgets`.** An installation needs a widget set
+  before a question can name a widget, and inventing one is a poor first task.
+  This creates the set the client has components for. Idempotent, so it is safe
+  in a deploy step and safe to re-run after an upgrade; it leaves a widget you
+  have edited alone unless you pass `--overwrite`, will not take a default
+  question type away from a widget of your own, and `--dry-run` says what it
+  would do. The set is `widget_defaults.DEFAULT_WIDGETS`, meant to be edited
+  rather than copied.
+
+- **A preview in the editor.** A third pane showing what a respondent will see,
+  rendered through the same registry, at the real width of whichever breakpoint
+  is picked, with the grid guides on. It renders from `planFromDefinition`
+  rather than from a fetched plan, so it follows the keystroke rather than the
+  save, and it can narrow to whatever the outline has selected. `showsPreview`
+  starts it closed; the bar has a button either way.
+
+  **Use the full width** hands the preview the editor's whole width and puts the
+  outline and the inspector away. A third of a screen cannot show a desktop
+  breakpoint at its real size, and that is the one thing an author cannot get
+  any other way. The pane also says which it is giving you -- "Actual size", or
+  "53% of actual size" when it has had to scale, because at 53% the layout is
+  exact and the type size is not, and that is worth knowing before judging
+  anything by it.
+
+- **`planFromDefinition(document, catalog)`**, which resolves a document the way
+  the server would as far as the catalog allows -- widget defaults, inherited
+  columns, active choices -- for anything that wants to render a document that
+  has not been saved.
+
+- **`selectionFromPath`**, `pathOf` run backwards, so an issue's node path can
+  be turned back into a selection.
+
+- **A playground**, `npm run playground` in `client/`. The editor and the
+  rendered form over a fake API, with a width slider, a dark switch and a
+  toggle that registers a replacement widget -- which is the short way to see
+  that the editor previews the host's widgets rather than the package's. Vite
+  arrives as vitest's dependency, so it costs no extra install, and nothing in
+  `playground/` is published.
+
+### Changed
+
+- **Column counts are picked on the grid.** Both the layer counts and a
+  question's minimum columns are now a strip of cells drawn at the size the grid
+  actually is, one per breakpoint, captioned with what it inherits when nothing
+  is set. They are radio inputs underneath, so arrow keys move through them.
+
+- **The column fields no longer disappear.** A questionnaire with no window size
+  ranges has nowhere to store a column count, and both fields rendered nothing
+  at all rather than saying so -- which is why they were hard to find. They now
+  name the prerequisite and offer to add the standard phone/tablet/desktop
+  breakpoints, or one range to fill in.
+
+- **A question's form is grouped.** Six named parts -- name and key, type and
+  answers, choices, layout, widget, when it applies, validators -- instead of
+  every field of every kind in one scroll. A closed group says what is in it.
+
+- **The validator chain is legible.** Each link is a card with its step number,
+  its name, and its position in the chain, since a chain is the one list here
+  where the order carries meaning. A disabled one stays put and stops looking
+  active. Message overrides are shut by default, saying whether any are set --
+  a fieldset of empty fields per error key was the noisiest thing on the form.
+
+- **Adding a validator names it up front.** A select listing every one that
+  applies to the question's type, with the ones already on the chain shown but
+  disabled. It used to hand out `required` and leave you to change it, which is
+  two steps to do one thing and reads as though the editor had decided
+  something for you.
+
+- **The key writes itself, and explains itself.** It was a field beside the
+  title, which put the most consequential value on the form -- answers are
+  filed under it, conditions and integrations name it, the server matches on it
+  -- in front of someone who mostly wants to name a question. It is now a line
+  of help text with an Edit button, and asking to edit it brings up what it is
+  actually for, worded for the node in hand: a page's key is not a question's.
+
+  It follows the title until the node has been saved, and then stops for good.
+  That boundary is the whole rule: before a save nothing is stored against the
+  key, so rewriting it costs nothing; after one, answers are filed under it and
+  rewriting it would orphan every one of them. Typing in the key field stops it
+  following too. The field opens by itself when a save is refused over the key,
+  so the error is always actionable.
+
+- **Adding a node selects it.** "+ Question" used to put a row in the outline
+  and change nothing else on screen, leaving you to find and click the thing you
+  had just asked for.
+
+- **The editor's issue list links to the node.** Each entry selects what it is
+  about, rather than printing a path to go and find by hand.
+
+- **The plan carries `otherLabel`.** An author who named the "other" escape
+  hatch meant the respondent to read that name, and the plan was dropping it, so
+  the client had nothing to show but its own wording.
+
+- **The editor's body is three columns** when the preview is open, two when it
+  is not, and stacks the preview underneath below 1200px.
+
+- **Removing a row says the word "Remove".** It was a bare `×` -- small,
+  unlabelled to the eye, sitting next to the fields it destroys, with no clue
+  what it takes with it. A poor thing for the only irreversible control on the
+  form. This covers a question's choices as well as its validators.
+
+- **`validators.position` takes a count.** It reads "step 2 of 3" rather than
+  "2.", so the string function now receives `{ position, count }`. A catalogue
+  overriding it with a function of `{ position }` alone keeps working; one that
+  wants the count can now have it.
+
+### Fixed
+
+- **The key follows the whole title, not its first character.** Whether to keep
+  deriving the key was decided by asking whether the key still *looked* like one
+  the editor had generated -- which stopped being true as soon as the first
+  character was typed, so a new question titled "Your job title" ended up keyed
+  `y`. Nodes the server has never seen now say so outright, and that is what is
+  asked instead.
+
+  The bug predates the key field being tucked behind an Edit button, but that
+  change is what made it dangerous: the wrong key used to be on screen where it
+  would be noticed and corrected.
+
+- **A range previews at a width that is actually in it.** `widthOf` returned a
+  bounded range's *widest* point, which is the single worst choice available:
+  the widest tablet is one pixel off the narrowest desktop, so two adjacent
+  breakpoints previewed identically, and a phone range of 0-767 rendered at 767
+  -- a width no phone has ever had. It now takes the midpoint of a bounded
+  range and clears the floor of an unbounded one, so the usual three
+  breakpoints preview at 384, 896 and 1280 rather than 767, 1023 and 1024.
+
+  The preview bar says which width is in force, since a range is a span and
+  this is one point in it.
+
+- **The "other" box is always on screen** for a question that allows one, rather
+  than appearing once its radio is selected -- which made it a box that could
+  not be typed into to begin with. Typing into it is what selects "other", and
+  what is stored is what was typed, never a sentinel.
+
 
 ## [0.3.0] - 2026-09-01
 

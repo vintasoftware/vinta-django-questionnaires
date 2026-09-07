@@ -105,8 +105,22 @@ export const defaultStrings = {
   "field.empty": "--",
   "field.title": "Title",
   "field.key": "Key",
-  "field.keyHint":
-    "Answers are stored against this. Changing it orphans the answers already given.",
+  // The short version, for the tooltip on the collapsed line. True of all three
+  // kinds of node, which is why it says "this" rather than naming one.
+  "field.keyHint": "How the rest of the system points at this. Not shown to anyone answering.",
+  // The long version, shown under the field once someone asks to edit it --
+  // which is the moment the stakes are worth spelling out, and the only moment
+  // most authors will ever need them.
+  "field.keyHint.question":
+    "Answers are filed under this key, and conditions and integrations name it. Changing it is a delete and a create rather than a rename, so answers already given are left behind.",
+  "field.keyHint.page":
+    "The server matches this page by its key when you save, and a response records its progress by it. Changing it is a delete and a create rather than a rename.",
+  "field.keyHint.section":
+    "The server matches this section by its key when you save. Changing it is a delete and a create rather than a rename.",
+  "field.keyEdit": "Edit",
+  "field.keyPending": "written from the title",
+  "field.keyFollows": "written from the title",
+  "field.keyFixed": "will not change with the title",
   "field.label": "Label",
   "field.description": "Description",
   "field.conclusion": "Conclusion",
@@ -217,15 +231,27 @@ export const defaultStrings = {
     "They run in this order, and each one sees what the ones before it recorded.",
   "validators.listName": "validators",
   "validators.item": ({ name }: { name: string }) => `validator ${name}`,
-  "validators.position": ({ position }: { position: number }) => `${position}.`,
+  "validators.position": ({ position, count }: { position: number; count: number }) =>
+    `step ${position} of ${count}`,
   "validators.enabled": "Enabled",
-  "validators.remove": "Remove this validator",
+  "validators.remove": "Remove",
+  "validators.none": "Nothing is checked yet, so any answer of the right type is accepted.",
+  "validators.which": "Validator",
+  "validators.unknown": ({ key }: { key: string }) =>
+    `There is no validator called "${key}". It may have been removed from the server.`,
   "validators.serverOnly": "Checked on submit only -- the browser cannot run it.",
+  "validators.serverOnlyBadge": "on submit",
   "validators.customMode":
     "Needs an implementation registered under the same key in the browser.",
+  "validators.customBadge": "needs code",
   "validators.params": "Params",
   "validators.messages": "Messages",
-  "validators.add": "+ Validator",
+  "validators.messagesDefault": "Using the validator's own wording",
+  "validators.messagesOverridden": ({ count }: { count: number }) =>
+    count === 1 ? "1 reworded" : `${count} reworded`,
+  "validators.add": "Add a validator",
+  "validators.addEmpty": "Pick one...",
+  "validators.alreadyAdded": ({ label }: { label: string }) => `${label} (already added)`,
 
   // ------------------------------------------- a schema rendered as a form
   "schemaForm.required": ({ label }: { label: string }) => `${label} *`,
@@ -268,6 +294,77 @@ export const defaultStrings = {
     `${label} does not apply to this question type.`,
   "issue.choice.valueRequired": "A choice needs a value -- it is what is stored.",
   "issue.choice.duplicateValue": "Another choice already uses this value.",
+
+  // ------------------------------------------------------ the rendered form
+  "view.required": "Required",
+  "view.skippable": "Can be skipped",
+  "view.conditional": "Only sometimes shown",
+  "view.noPages": "This questionnaire has no pages yet.",
+  "view.noQuestions": "No questions in this section yet.",
+  "view.noWidget": ({ widget }: { widget: string }) =>
+    `Nothing renders "${widget}". Register a component for it.`,
+  "widget.other": "Something else",
+  "widget.loading": "Loading the options...",
+  "widget.range.start": "From",
+  "widget.range.end": "Until",
+  "widget.repeater.add": "Add another",
+  "widget.repeater.empty": "Nothing added yet.",
+  "widget.repeater.remove": ({ position }: { position: number }) => `Remove entry ${position}`,
+  "widget.nested.unresolved":
+    "The nested questionnaire is fetched when the respondent opens it.",
+
+  // ------------------------------------------------------------ the preview
+  "preview.heading": "Preview",
+  "preview.hide": "Hide the preview",
+  "preview.show": "Show the preview",
+  "preview.grid": "Show the grid",
+  "preview.width": ({ width }: { width: number }) => `${width}px`,
+  "preview.range": "Width",
+  "preview.noRanges": "Add a window size range and the preview will lay this out against it.",
+  "preview.approximate":
+    "Options and nested questionnaires are filled in by the server when a respondent opens this.",
+  "preview.renderedAt": ({ width }: { width: number }) => `${width}px wide`,
+  "preview.widen": "Use the full width",
+  "preview.narrow": "Back to the side",
+  "preview.scaled": ({ percent }: { percent: number }) => `${percent}% of actual size`,
+  "preview.scaledHint":
+    "The layout is exact; the type is shrunk to fit. Widen the pane to see it at its real size.",
+  "preview.actual": "Actual size",
+  "preview.actualHint": "This range fits, so everything is at the size a respondent will see.",
+  "preview.scope.version": "Whole questionnaire",
+  "preview.scope.selection": "What is selected",
+
+  // ------------------------------------------------------------ the columns
+  "columns.legend": "Grid",
+  "columns.span": ({ span, columns }: { span: number; columns: number }) =>
+    `${span} of ${columns} columns`,
+  "columns.inherited": ({ columns }: { columns: number }) => `Inherits ${columns}`,
+  "columns.setFor": ({ range }: { range: string }) => `Columns at ${range}`,
+  "columns.spanFor": ({ range }: { range: string }) => `Width at ${range}`,
+  "columns.clear": "Inherit instead",
+  "columns.noRanges": "This questionnaire has no window size ranges yet.",
+  "columns.noRangesHint":
+    "A column count is stored against a breakpoint, so there is nowhere to put one until this questionnaire has at least one.",
+  "columns.addStandard": "Add phone, tablet and desktop",
+  "columns.addOne": "Add a range",
+
+  // ---------------------------------------------------------- form sections
+  "group.identity": "Name and key",
+  "group.content": "Wording",
+  "group.behaviour": "Type and answers",
+  "group.layout": "Layout",
+  "group.widget": "Widget",
+  "group.choices": "Choices",
+  "group.validators": "Validators",
+  "group.rules": "When it applies",
+  "group.schedule": "Status and deadlines",
+  "choices.count": ({ count }: { count: number }) =>
+    count === 0 ? "none yet" : count === 1 ? "1 choice" : `${count} choices`,
+  "validators.count": ({ count }: { count: number }) =>
+    count === 0 ? "nothing checked" : count === 1 ? "1 validator" : `${count} validators`,
+  "field.conditionAlways": "Always shown",
+  "issues.goTo": "Go to it",
+  "issues.more": ({ count }: { count: number }) => `and ${count} more`,
 } satisfies Record<string, StringValue>
 
 /** A message that needs something filled in: what it needs in, sentence out. */

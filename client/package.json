@@ -37,7 +37,12 @@
       "types": "./dist/editor/index.d.ts",
       "import": "./dist/editor/index.js"
     },
-    "./editor.css": "./dist/editor.css"
+    "./widgets": {
+      "types": "./dist/widgets/index.d.ts",
+      "import": "./dist/widgets/index.js"
+    },
+    "./editor.css": "./dist/editor.css",
+    "./widgets.css": "./dist/widgets.css"
   },
   "files": [
     "dist"
@@ -45,7 +50,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node scripts/copy-assets.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "playground": "vite --config playground/vite.config.ts"
   },
   "peerDependencies": {
     "@dnd-kit/core": "^6.0.0",

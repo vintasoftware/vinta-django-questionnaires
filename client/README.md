@@ -74,6 +74,57 @@ is still listed in `pending`, because skipping means later, not never.
 hold, which is also what decides what gets validated. Rendering and validation
 therefore agree by construction.
 
+## Rendering a questionnaire
+
+The package ships a component for every question type, and for every widget key
+`install_default_widgets` creates, so a plan renders as soon as it is fetched:
+
+```tsx
+import { QuestionnaireView } from "vinta-django-questionnaires-client/widgets"
+import "vinta-django-questionnaires-client/widgets.css"
+
+<QuestionnaireView
+  plan={plan}
+  answers={answers}
+  errors={errors}
+  onChange={(key, value) => setAnswers((current) => ({ ...current, [key]: value }))}
+  width={window.innerWidth}
+/>
+```
+
+It decides which window size range the width falls in, resolves each layer's
+column count, and packs every section's questions into rows of that grid --
+honouring what each question asks for and its "must be first/last in its row"
+flags. That is the half of the layout model a plan leaves to the client.
+
+None of the components are meant to survive contact with a real design system,
+and none of them have to. The key a widget is registered under is the key the
+`QuestionnaireWidget` row stores, which is the key the server resolved into the
+plan, so a project takes one over by claiming the same key:
+
+```tsx
+import { registerWidget } from "vinta-django-questionnaires-client/widgets"
+import { RadioGroup, RadioGroupItem } from "my-design-system"
+
+registerWidget("radio-group", ({ question, value, onChange, id, t }) => (
+  <RadioGroup id={id} value={(value as string) ?? ""} onValueChange={onChange}>
+    {(question.choices ?? []).map((choice) => (
+      <RadioGroupItem key={choice.value} value={choice.value} label={choice.label} />
+    ))}
+  </RadioGroup>
+))
+```
+
+Registering does not destroy what the package shipped, so `unregisterWidget`
+puts the default back rather than leaving a hole. A question whose widget
+nobody registered falls through to the component for its question *type*, and
+one that nothing at all renders says so on the page rather than being silently
+skipped -- a question a respondent cannot answer is worse than an ugly one.
+
+What every widget is handed is `WidgetProps`: the question's plan, the value and
+an `onChange`, the id its label points at, whatever failed against it, the
+options for a value set the client resolved, and `t` for its own words.
+
 ## Custom validators
 
 A validator the server marks as custom needs an implementation here, under the
@@ -154,7 +205,29 @@ What it does that a plain form would not:
   question's field rather than at the top of the page.
 - **It checks what it can without asking.** Empty and clashing keys, choices
   storing the same value, a validator that does not apply to the question's
-  type. The server still has the last word and says so in the same shape.
+  type. The server still has the last word and says so in the same shape. Each
+  one is a link to the node it is about, because finding that node by reading
+  `pages.0.sections.1.questions.2` is not a thing to ask of anybody.
+- **Keys stay out of the way, and say what they are.** A key is identity, not a
+  label: answers are filed under a question's key, conditions and integrations
+  name it, and the server matches nodes by key on save -- so changing one is a
+  delete and a create, not a rename. The editor writes it from the title while
+  it is still the editor's own, shows it as help text, and explains what it is
+  for at the moment you ask to edit it.
+- **The validator chain reads as a chain.** Each link is a card carrying its
+  step number and its position, because the order is load-bearing -- every link
+  sees what the ones before it recorded. Adding one is a select of everything
+  that applies to the question's type, so you name what you want rather than
+  being handed `required` and changing it. Message overrides are shut until
+  there are some.
+- **The grid is picked on the grid.** How many columns a layer's grid has, and
+  how many of them a question takes, are chosen on a strip of cells drawn at the
+  size the grid actually is -- one strip per breakpoint, captioned with what it
+  inherits when nothing is set. A number field cannot say that six of twelve is
+  half a row and four of four is the whole one.
+- **Nothing hides.** A questionnaire with no window size ranges has nowhere to
+  store a column count, and the fields used to vanish rather than say so. They
+  now name the prerequisite and offer to add the standard breakpoints.
 - **Everything ordered is dragged.** Pages, sections, questions, choices and
   the validator chain. There is a `DndContext` per list rather than one for the
   whole editor, which is what makes a drag unable to take a question out of its
@@ -181,6 +254,37 @@ window.location.href = api.responseExportUrl({ questionnaire: "intake", columns:
 table can offer a column picker without knowing what the questionnaire asks.
 `cellText` renders a value the way the CSV export does, and `groupColumns`
 arranges the picker by page. The demo builds a TanStack Table on exactly that.
+
+### The preview
+
+The editor shows what a respondent will see, beside what is being typed. It is
+not a luxury: the layout model is column counts stored per breakpoint, and no
+arrangement of number fields makes it legible that a question set to six columns
+takes half a row on a tablet and a whole one on a phone. So the pane is built
+around the breakpoints -- pick one and the form renders at that range's real
+width, on that range's grid, with the guides on.
+
+It renders from `planFromDefinition(document, catalog)` rather than from a
+fetched plan, so it keeps up with the keystroke rather than the save. What that
+cannot resolve locally -- a value set's options, a nested questionnaire's pages
+-- is said at the foot of the pane rather than faked.
+
+The pane starts open; `showsPreview={false}` starts it closed, and the bar has a
+button for it either way. It renders through the same registry as
+`QuestionnaireView`, so a widget you registered is the widget an author previews.
+
+Each breakpoint renders at a width that is representative of it rather than at
+its edge: the midpoint of a bounded range, and clear of the floor of an
+unbounded one. The usual phone/tablet/desktop trio comes out at 384, 896 and
+1280. The edges are where layouts break, and the way to look at one is to say
+so -- pass `QuestionnaireView` a `rangeKey` and a `width` of your own.
+
+**Use the full width** gives the preview the editor's whole width and puts the
+outline and the inspector away, because a third of a screen cannot show a
+desktop breakpoint at its real size. The pane says which of the two you are
+looking at -- "Actual size", or "53% of actual size" when it has had to scale
+the sheet to fit. That distinction matters: a scaled preview has an exact
+layout and a shrunken type size, and only one of those is safe to judge.
 
 ### Styling
 
@@ -339,6 +443,36 @@ nullish.
 `shared/conformance-cases.json` is written by the Python suite and replayed by
 this one. Both must produce the same error keys, in the same order.
 
+## The playground
+
+Both halves of the package, driven without a Django instance behind them:
+
+```bash
+npm --prefix client run playground   # http://localhost:5399
+```
+
+Two tabs. **Editor** is the authoring interface over a fake `EditorApi` that
+accepts every save, so Save, Revert and the unsaved badge all behave. **The form
+itself** is `QuestionnaireView` at a width you drag, with the answers it
+collects printed beside it -- which is the quickest way to see what shape each
+widget actually reports.
+
+Across both there is a switch that registers a replacement for `radio-group`.
+It is there to make one thing obvious that is otherwise taken on trust: the
+editor's preview renders through the same registry as the form, so the widget
+you registered is the widget an author previews.
+
+The fixture in `playground/fixture.ts` is deliberately awkward rather than tidy
+-- spans that do not divide evenly into the grid, a question pinned to the start
+of its row, an "other" escape hatch, a matrix, a section that overrides its
+parent's column count, a collapsed section, a conditional one, a skippable page.
+A playground that only holds simple cases only proves the simple cases.
+
+Vite comes in as vitest's own dependency, so this costs no extra install. There
+is no React plugin, so a save reloads the page rather than hot-swapping the
+component. Nothing in `playground/` is published -- the package ships `dist`
+only.
+
 ## Scripts
 
 | Command | What it does |
@@ -346,3 +480,4 @@ this one. Both must produce the same error keys, in the same order.
 | `npm test` | Replay the conformance corpus and the client's own tests |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run build` | Emit `dist/` |
+| `npm run playground` | Serve the playground on port 5399 |

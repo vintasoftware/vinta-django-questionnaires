@@ -73,6 +73,9 @@ def question_plan(
         plan["choices"] = _choices(question, "option")
     if spec.supports_other_option:
         plan["allowsOther"] = question.allows_other
+        # The label goes with it: an author who named the escape hatch meant the
+        # respondent to read that name, and the plan is the only way it travels.
+        plan["otherLabel"] = question.other_label
     if spec.uses_matrix_axes:
         plan["matrix"] = {
             "rows": _choices(question, "row"),
