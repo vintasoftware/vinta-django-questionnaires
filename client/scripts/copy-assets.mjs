@@ -1,4 +1,4 @@
-/** Copy the stylesheet next to the compiled editor, since tsc only emits JS. */
+/** Copy the stylesheets next to the compiled output, since tsc only emits JS. */
 import { copyFileSync, mkdirSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -6,4 +6,6 @@ import { fileURLToPath } from "node:url"
 const here = dirname(fileURLToPath(import.meta.url))
 const dist = join(here, "..", "dist")
 mkdirSync(dist, { recursive: true })
-copyFileSync(join(here, "..", "src", "editor.css"), join(dist, "editor.css"))
+for (const sheet of ["editor.css", "widgets.css"]) {
+  copyFileSync(join(here, "..", "src", sheet), join(dist, sheet))
+}

@@ -57,8 +57,23 @@ export interface QuestionDefinition {
   validators: ValidatorDefinition[]
   /** Written by the server, ignored on the way back. */
   resolved?: { widget: string | null; fingerprint: string }
+  /** Written by the editor, stripped on the way out. See `isNew` below. */
+  isNew?: boolean
 }
 
+/**
+ * Marks a node the server has never seen.
+ *
+ * The editor writes it, `outgoingDocument` strips it, and a save replaces the
+ * whole document with the server's reply -- so it is true exactly while a node
+ * is unsaved, and never travels anywhere.
+ *
+ * It exists because "has this been saved" is not something a document can be
+ * asked otherwise. Keys mutate as they are typed, so they cannot identify a
+ * node across a comparison, and positions shift as things are added. Guessing
+ * from the shape of the key -- which is what this replaced -- got it wrong the
+ * moment the key stopped looking generated, which is after the first keystroke.
+ */
 export interface SectionDefinition {
   key: string
   title: string
@@ -69,6 +84,8 @@ export interface SectionDefinition {
   /** The columns this section declares itself, not the ones it inherits. */
   columns: Record<string, number>
   questions: QuestionDefinition[]
+  /** Written by the editor, stripped on the way out. */
+  isNew?: boolean
 }
 
 export interface PageDefinition {
@@ -80,6 +97,8 @@ export interface PageDefinition {
   isSkippable: boolean
   columns: Record<string, number>
   sections: SectionDefinition[]
+  /** Written by the editor, stripped on the way out. */
+  isNew?: boolean
 }
 
 export interface WindowSizeRangeDefinition {

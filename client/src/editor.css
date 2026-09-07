@@ -124,17 +124,59 @@
   border-bottom-color: var(--vqe-danger);
 }
 
+/* Three columns: what the questionnaire is made of, the settings of what is
+   selected, and what a respondent sees. The preview column exists only when the
+   pane is open, so closing it gives the inspector the whole width rather than
+   leaving a gap where it was. */
 .vqe__body {
   display: grid;
-  grid-template-columns: minmax(200px, 300px) minmax(0, 1fr);
+  grid-template-columns: minmax(200px, 260px) minmax(0, 1fr);
   /* Stretch, so the outline rail is as tall as the inspector beside it. What
      stays level while the page scrolls is `.vqe-outline__pane` inside it. */
   align-items: stretch;
   min-height: 0;
 }
 
+.vqe[data-vqe-preview="pane"] .vqe__body {
+  grid-template-columns: minmax(180px, 240px) minmax(0, 1fr) minmax(320px, 34%);
+}
+
+/* The preview with the editor's whole width. Not a wider pane -- the other two
+   columns are gone, because a third of a screen cannot show a desktop
+   breakpoint at its real size, and that is the one thing an author cannot get
+   any other way. The outline and the inspector are a click away and nothing
+   about them needs to be visible to look at a form. */
+.vqe[data-vqe-preview="wide"] .vqe__body {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.vqe[data-vqe-preview="wide"] .vqe-outline,
+.vqe[data-vqe-preview="wide"] .vqe__inspector {
+  display: none;
+}
+
+.vqe[data-vqe-preview="wide"] .vqe-preview {
+  border-left: 0;
+}
+
+/* Two panes rather than three once there is no room for the inspector and the
+   preview side by side: the preview drops under them, still usable, still the
+   full width of the editor. */
+@media (max-width: 1200px) {
+  .vqe[data-vqe-preview="pane"] .vqe__body {
+    grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);
+  }
+
+  .vqe[data-vqe-preview="pane"] .vqe-preview {
+    grid-column: 1 / -1;
+    border-left: 0;
+    border-top: 1px solid var(--vqe-border);
+  }
+}
+
 @media (max-width: 720px) {
-  .vqe__body {
+  .vqe__body,
+  .vqe[data-vqe-preview="pane"] .vqe__body {
     grid-template-columns: minmax(0, 1fr);
   }
 }
@@ -498,4 +540,582 @@
 .vqe code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.8125rem;
+}
+
+/* ================================================================= the grid
+
+   The one place the editor stops being a form and becomes an instrument.
+   Column counts are the part of the model a number field describes worst -- "6"
+   says nothing without knowing the grid is twelve wide -- so they are picked on
+   a strip of cells that is the grid, at the size it actually is. */
+
+.vqe-strips {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.vqe-strips__row {
+  display: grid;
+  grid-template-columns: minmax(6rem, 9rem) minmax(0, 1fr);
+  gap: 0.5rem 0.875rem;
+  align-items: center;
+}
+
+@media (max-width: 640px) {
+  .vqe-strips__row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.vqe-strips__name {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  min-width: 0;
+}
+
+.vqe-strips__width {
+  font-weight: 400;
+  color: var(--vqe-text-muted);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.vqe-strip {
+  min-width: 0;
+}
+
+.vqe-strip__cells {
+  display: grid;
+  grid-template-columns: repeat(var(--vqe-strip-cells), minmax(0, 1fr));
+  gap: 2px;
+  border: 1px solid var(--vqe-border);
+  border-radius: var(--vqe-radius);
+  padding: 2px;
+  background: var(--vqe-surface);
+}
+
+.vqe-strip__cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.75rem;
+  border-radius: 3px;
+  background: var(--vqe-surface-sunken);
+  color: var(--vqe-text-muted);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  /* No transition: dragging the pointer across twelve cells with a fade on
+     each one reads as lag rather than as feedback. */
+}
+
+.vqe-strip__cell:hover {
+  background: var(--vqe-border);
+}
+
+.vqe-strip__cell.is-filled {
+  background: var(--vqe-accent);
+  color: var(--vqe-accent-text);
+}
+
+/* The radio is what makes the strip a real control -- arrow keys, a group name,
+   a bound label -- so it is placed over the cell and made invisible rather than
+   removed, which would take the keyboard with it. */
+.vqe-strip__input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.vqe-strip__input:focus-visible {
+  outline: 2px solid var(--vqe-accent);
+  outline-offset: 1px;
+  opacity: 1;
+}
+
+.vqe-strip__number {
+  pointer-events: none;
+}
+
+.vqe-strip__caption {
+  margin: 0.3125rem 0 0;
+  font-size: 0.75rem;
+  color: var(--vqe-text-muted);
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.vqe-strip__clear {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 0.75rem;
+  color: var(--vqe-accent);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* What a control says instead of vanishing when its prerequisite is missing. */
+.vqe-prereq {
+  border: 1px dashed var(--vqe-border);
+  border-radius: var(--vqe-radius);
+  padding: 0.75rem 0.875rem;
+  background: var(--vqe-surface);
+}
+
+.vqe-prereq__title {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.8125rem;
+}
+
+.vqe-prereq__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.625rem;
+}
+
+/* ============================================================== the issues */
+
+.vqe-issues {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.vqe-issues__go {
+  border: 0;
+  background: none;
+  padding: 0.125rem 0;
+  font: inherit;
+  font-size: 0.8125rem;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-bottom: 1px solid transparent;
+}
+
+.vqe-issues__go:hover {
+  border-bottom-color: currentColor;
+}
+
+/* ============================================================= the preview */
+
+.vqe-preview {
+  border-left: 1px solid var(--vqe-border);
+  background: var(--vqe-surface-sunken);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.vqe-preview__bar {
+  padding: 0.625rem 0.75rem;
+  border-bottom: 1px solid var(--vqe-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  position: sticky;
+  top: 0;
+  background: var(--vqe-surface-sunken);
+  z-index: 1;
+}
+
+/* The breakpoints, as the switch between them. Each button carries the widths
+   it covers, because that is the thing being switched -- the name is a label
+   somebody chose and the numbers are what the layout actually keys off. */
+.vqe-preview__ranges {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.vqe-preview__range {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.0625rem;
+  border: 1px solid var(--vqe-border);
+  border-radius: var(--vqe-radius);
+  background: var(--vqe-surface);
+  color: var(--vqe-text-muted);
+  font: inherit;
+  padding: 0.3125rem 0.5rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.vqe-preview__range.is-selected {
+  border-color: var(--vqe-accent);
+  box-shadow: inset 0 0 0 1px var(--vqe-accent);
+  color: var(--vqe-text);
+}
+
+.vqe-preview__range-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.vqe-preview__range-width {
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.vqe-preview__toggles {
+  display: flex;
+  gap: 0.875rem;
+  flex-wrap: wrap;
+}
+
+.vqe-preview__toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  color: var(--vqe-text-muted);
+  cursor: pointer;
+}
+
+.vqe-preview__toggle input {
+  accent-color: var(--vqe-accent);
+  margin: 0;
+}
+
+/* The stage is the ruler and the sheet is what is being measured, so the sheet
+   is clamped to the range's own width and the stage shows what is left over.
+   Seeing the slack is the point: it is how a phone range reads as narrow. */
+.vqe-preview__stage {
+  flex: 1;
+  overflow: auto;
+  padding: 1rem 0.75rem 2rem;
+  min-height: 0;
+}
+
+/* Holds the room the scaled sheet takes up. A transform does not change layout,
+   so without a frame of its own the pane would scroll as though the sheet were
+   still at full size. */
+.vqe-preview__frame {
+  overflow: hidden;
+}
+
+.vqe-preview__sheet {
+  background: var(--vqe-surface);
+  border: 1px solid var(--vqe-border);
+  border-radius: var(--vqe-radius);
+  padding: 1.25rem;
+  transform-origin: top left;
+}
+
+/* With the full width there is room for the bar to be one line and for the
+   sheet to sit centred in whatever is left over. */
+.vqe[data-vqe-preview="wide"] .vqe-preview__bar {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.vqe[data-vqe-preview="wide"] .vqe-preview__ranges {
+  flex: 0 1 auto;
+}
+
+.vqe[data-vqe-preview="wide"] .vqe-preview__range {
+  flex: 0 0 auto;
+}
+
+.vqe[data-vqe-preview="wide"] .vqe-preview__stage {
+  padding: 1.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+.vqe-preview__width {
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--vqe-text-muted);
+  white-space: nowrap;
+}
+
+.vqe-preview__scale {
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--vqe-text-muted);
+  border: 1px solid transparent;
+  border-radius: var(--vqe-radius);
+  padding: 0 0.375rem;
+  cursor: help;
+}
+
+/* Marked only when it is scaled, because that is the case with the caveat. */
+.vqe-preview__scale.is-scaled {
+  border-color: var(--vqe-warn-border);
+  background: var(--vqe-warn-surface);
+  color: var(--vqe-text);
+}
+
+.vqe-preview__widen {
+  font: inherit;
+  font-size: 0.75rem;
+  border: 1px solid var(--vqe-border);
+  background: var(--vqe-surface);
+  color: var(--vqe-text);
+  border-radius: var(--vqe-radius);
+  padding: 0.1875rem 0.5rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.vqe-preview__widen:hover {
+  border-color: var(--vqe-accent);
+}
+
+.vqe-preview__widen[aria-pressed="true"] {
+  border-color: var(--vqe-accent);
+  box-shadow: inset 0 0 0 1px var(--vqe-accent);
+}
+
+.vqe-preview__footnote {
+  margin: 0;
+  padding: 0.5rem 0.75rem 0.75rem;
+  font-size: 0.75rem;
+  color: var(--vqe-text-muted);
+  border-top: 1px solid var(--vqe-border);
+  max-width: 62ch;
+}
+
+/* ====================================================== the grouped forms */
+
+.vqe-group {
+  border: 1px solid var(--vqe-border);
+  border-radius: var(--vqe-radius);
+  background: var(--vqe-surface);
+}
+
+.vqe-group + .vqe-group {
+  margin-top: var(--vqe-gap);
+}
+
+.vqe-group__summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  list-style: none;
+  border-radius: var(--vqe-radius);
+}
+
+.vqe-group__summary::-webkit-details-marker {
+  display: none;
+}
+
+.vqe-group__summary::before {
+  content: "";
+  width: 0;
+  height: 0;
+  border-left: 5px solid currentColor;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  color: var(--vqe-text-muted);
+  flex: 0 0 auto;
+}
+
+.vqe-group[open] > .vqe-group__summary::before {
+  transform: rotate(90deg);
+}
+
+/* A closed group still says what is inside it, so the form can be skimmed shut.
+   Hidden once open, where the fields say it better than a summary could. */
+.vqe-group__gist {
+  font-weight: 400;
+  color: var(--vqe-text-muted);
+  font-size: 0.75rem;
+  margin-left: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vqe-group[open] > .vqe-group__summary .vqe-group__gist {
+  display: none;
+}
+
+.vqe-group__body {
+  padding: 0 0.75rem 0.875rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--vqe-gap);
+  border-top: 1px solid var(--vqe-border);
+  padding-top: 0.875rem;
+}
+
+/* ====================================================== the validator chain
+
+   A chain is the one list here where the order is load-bearing: each link sees
+   what the ones before it recorded. So it is numbered, and each card says which
+   step it is rather than leaving that to be counted off the screen. */
+
+.vqe-chain {
+  border-left: 3px solid var(--vqe-accent);
+}
+
+/* A disabled link stays in place and stops looking active. Removed would be a
+   different decision, and the checkbox is there so it does not have to be. */
+.vqe-chain.is-off {
+  border-left-color: var(--vqe-border);
+  opacity: 0.72;
+}
+
+.vqe-chain__head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.vqe-chain__step {
+  flex: 0 0 auto;
+  width: 1.375rem;
+  height: 1.375rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--vqe-accent);
+  color: var(--vqe-accent-text);
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.vqe-chain.is-off .vqe-chain__step {
+  background: var(--vqe-border);
+  color: var(--vqe-text-muted);
+}
+
+.vqe-chain__name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  /* Takes the slack, so the enabled switch and Remove sit together at the far
+     end of every card rather than wherever the name happens to stop. */
+  flex: 1 1 auto;
+}
+
+.vqe-chain__position {
+  font-size: 0.6875rem;
+  color: var(--vqe-text-muted);
+}
+
+/* The head's own controls opt out of the row-wide field sizing: a checkbox and
+   a button are as wide as they are, and stretching them to 12rem apiece is what
+   made the head wrap on cards that had plenty of room. */
+.vqe-chain__head > .vqe-field--inline {
+  flex: 0 0 auto;
+}
+
+/* A group nested inside a card, which the messages fieldset is. Flatter than a
+   top-level one so the card stays the outermost box. */
+.vqe-group--nested {
+  background: var(--vqe-surface-sunken);
+}
+
+.vqe-group--nested > .vqe-group__body {
+  padding-bottom: 0.75rem;
+}
+
+/* The key, as help text rather than a field.
+
+   It is the most consequential value on the form -- answers are stored against
+   it -- and the one an author has least reason to touch, so it states itself
+   and stays out of the way until someone asks for it. */
+.vqe-key {
+  display: flex;
+  align-items: baseline;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+  margin: -0.25rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--vqe-text-muted);
+}
+
+.vqe-key__label {
+  font-weight: 600;
+}
+
+.vqe-key__value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+  color: var(--vqe-text);
+  background: var(--vqe-surface-sunken);
+  border: 1px solid var(--vqe-border);
+  border-radius: 4px;
+  padding: 0 0.3125rem;
+}
+
+.vqe-key__note {
+  font-size: 0.75rem;
+}
+
+.vqe-key__edit {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 0.75rem;
+  color: var(--vqe-accent);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* A list inside a group, where the group's summary is the heading. It is the
+   fieldset's layout without the fieldset's box, because the card around it is
+   already a box and two nested ones read as a mistake. */
+.vqe-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vqe-gap);
+  min-width: 0;
+  align-items: stretch;
+}
+
+.vqe-list > .vqe-button {
+  align-self: flex-start;
+}
+
+/* Picking what to add. A labelled select rather than a bare button, because
+   which validator to add is the whole question, and every applicable one is
+   worth seeing at the moment it is asked. */
+.vqe-add {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  border: 1px dashed var(--vqe-border);
+  border-radius: var(--vqe-radius);
+  padding: 0.5rem 0.625rem;
+}
+
+.vqe-add__label {
+  font-weight: 600;
+  font-size: 0.8125rem;
+}
+
+.vqe-add__select {
+  flex: 0 1 16rem;
+  width: auto;
 }

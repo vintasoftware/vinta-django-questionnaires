@@ -67,6 +67,31 @@ export function pathOf(target: Selection | NodePath | null): string {
   return parts.join(".")
 }
 
+/**
+ * The node a dotted path addresses -- `pathOf` run backwards.
+ *
+ * The server reports an issue against `pages.0.sections.1.questions.2`, and
+ * sometimes against something under it (`...questions.2.choices.0`). Both
+ * belong to the same question, so anything past the third segment pair is
+ * dropped: it names a field of the node, not another node.
+ */
+export function selectionFromPath(path: string): Selection {
+  const parts = path.split(".")
+  const indexAfter = (label: string): number | null => {
+    const at = parts.indexOf(label)
+    if (at === -1) return null
+    const value = Number(parts[at + 1])
+    return Number.isInteger(value) ? value : null
+  }
+  const page = indexAfter("pages")
+  if (page === null) return { kind: "version" }
+  const section = indexAfter("sections")
+  if (section === null) return { kind: "page", page }
+  const question = indexAfter("questions")
+  if (question === null) return { kind: "section", page, section }
+  return { kind: "question", page, section, question }
+}
+
 /** The issues reported against one node, keyed by field. */
 export function issuesAt(
   issues: readonly DefinitionIssue[],
@@ -167,6 +192,7 @@ export function newPage(
     isSkippable: false,
     columns: {},
     sections: [],
+    isNew: true,
   }
 }
 
@@ -183,6 +209,7 @@ export function newSection(
     condition: "",
     columns: {},
     questions: [],
+    isNew: true,
   }
 }
 
@@ -210,6 +237,7 @@ export function newQuestion(
     subQuestionnaireVersion: null,
     choices: [],
     validators: [],
+    isNew: true,
   }
 }
 
@@ -269,7 +297,8 @@ export type EditorAction =
   /** Drag and drop: `path` is the *parent*, `null` for the list of pages. */
   | { type: "reorder"; path: NodePath | null; from: number; to: number }
   | { type: "patchItem"; path: QuestionPath; list: ItemList; index: number; patch: object }
-  | { type: "insertItem"; path: QuestionPath; list: ItemList }
+  /** *validator* names which one to add, for a list of them. */
+  | { type: "insertItem"; path: QuestionPath; list: ItemList; validator?: string }
   | { type: "removeItem"; path: QuestionPath; list: ItemList; index: number }
   | { type: "moveItem"; path: QuestionPath; list: ItemList; index: number; by: number }
   | { type: "reorderItem"; path: QuestionPath; list: ItemList; from: number; to: number }
@@ -278,6 +307,8 @@ export type EditorAction =
   | { type: "setMinimumColumns"; path: QuestionPath; range: string; columns: number | null }
   | { type: "patchRange"; index: number; patch: Partial<WindowSizeRangeDefinition> }
   | { type: "insertRange" }
+  /** Add several at once, skipping any key the document already has. */
+  | { type: "addRanges"; ranges: WindowSizeRangeDefinition[] }
   | { type: "removeRange"; index: number }
 
 export interface EditorState {
@@ -436,6 +467,34 @@ function insertNode(
   })
 }
 
+/**
+ * What `insert` should leave selected: the thing it just made.
+ *
+ * Adding a node used to leave the selection where it was, so "+ Question" put a
+ * row in the outline and changed nothing else on screen -- and the next thing
+ * anyone wants is to name the thing they just asked for.
+ */
+function selectionAfterInsert(
+  document: QuestionnaireDefinition,
+  path: NodePath | null,
+  index?: number,
+): Selection {
+  if (path === null) {
+    return { kind: "page", page: index ?? document.pages.length }
+  }
+  if (isSectionPath(path)) {
+    const section = sectionAt(document, path)
+    return {
+      kind: "question",
+      page: path.page,
+      section: path.section,
+      question: index ?? section?.questions.length ?? 0,
+    }
+  }
+  const page = pageAt(document, path)
+  return { kind: "section", page: path.page, section: index ?? page?.sections.length ?? 0 }
+}
+
 function removeNode(
   document: QuestionnaireDefinition,
   path: NodePath,
@@ -583,6 +642,9 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
       return {
         ...state,
         document: insertNode(state.document, action.path, action.index, action.title),
+        // Computed against the document as it was, so the index is the one the
+        // new node lands at rather than one past it.
+        selection: selectionAfterInsert(state.document, action.path, action.index),
       }
     case "remove":
       return {
@@ -632,7 +694,10 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
                   newChoice(question.choices.map((choice) => choice.value)),
                 ],
               }
-            : { ...question, validators: [...question.validators, newValidator()] },
+            : {
+                ...question,
+                validators: [...question.validators, newValidator(action.validator)],
+              },
         ),
       }
     case "removeItem":
@@ -696,6 +761,21 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
           ],
         },
       }
+    case "addRanges": {
+      // By key, so offering the standard breakpoints twice does not create a
+      // second `mobile` -- the server would refuse it, and the first one is
+      // already carrying whatever column counts were set against it.
+      const taken = new Set(state.document.windowSizeRanges.map((range) => range.key))
+      const added = action.ranges.filter((range) => !taken.has(range.key))
+      if (!added.length) return state
+      return {
+        ...state,
+        document: {
+          ...state.document,
+          windowSizeRanges: [...state.document.windowSizeRanges, ...added],
+        },
+      }
+    }
     case "removeRange":
       return {
         ...state,
@@ -713,16 +793,25 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
 
 // ------------------------------------------------------------------- saving
 
-/** The document as it goes back: without what only the server writes. */
+/**
+ * The document as it goes back: without what only one side writes.
+ *
+ * `resolved` is the server's and is ignored on the way in; `isNew` is the
+ * editor's own note that a node has never been saved, and means nothing to
+ * anyone else. Stripping both here is also what keeps `isDirty` honest, since
+ * it compares two documents through this function.
+ */
 export function outgoingDocument(document: QuestionnaireDefinition): QuestionnaireDefinition {
   const { state: _state, ...rest } = document
   return {
     ...rest,
-    pages: document.pages.map((page) => ({
+    pages: document.pages.map(({ isNew: _pageIsNew, ...page }) => ({
       ...page,
-      sections: page.sections.map((section) => ({
+      sections: page.sections.map(({ isNew: _sectionIsNew, ...section }) => ({
         ...section,
-        questions: section.questions.map(({ resolved: _resolved, ...question }) => question),
+        questions: section.questions.map(
+          ({ resolved: _resolved, isNew: _questionIsNew, ...question }) => question,
+        ),
       })),
     })),
   }

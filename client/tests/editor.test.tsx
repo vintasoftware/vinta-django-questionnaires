@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import type { EditorCatalog, QuestionnaireDefinition } from "../src/definition.js"
@@ -165,9 +165,51 @@ function withChoices(): QuestionnaireDefinition {
   return base
 }
 
+/**
+ * The outline rail, to query inside.
+ *
+ * The preview renders the same page and question titles the outline does, so a
+ * bare `outline().getByText("About")` now matches twice. Scoping says which of the
+ * two a test meant, which was always the outline for these.
+ */
+function outline() {
+  return within(screen.getByRole("navigation", { name: "Questionnaire outline" }))
+}
+
+/** The same, awaited: the rail only exists once the fetch has come back. */
+async function findOutline() {
+  return within(await screen.findByRole("navigation", { name: "Questionnaire outline" }))
+}
+
+/**
+ * Reveal the key field.
+ *
+ * It is help text with an Edit button until someone asks for it, so a test that
+ * wants to type a key has to ask the same way a person does.
+ */
+function editKey() {
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }))
+  return screen.getByLabelText("Key") as HTMLInputElement
+}
+
+/**
+ * Type *text* into a field one character at a time.
+ *
+ * `fireEvent.change` sets the whole value in one event, which is a paste rather
+ * than typing -- and the difference is not academic. A rule that looks at the
+ * field's current value on every keystroke behaves completely differently under
+ * the two, which is exactly how a bug that stopped the key after its first
+ * character got past a test that used `change`.
+ */
+function type(field: HTMLElement, text: string) {
+  for (let length = 1; length <= text.length; length += 1) {
+    fireEvent.change(field, { target: { value: text.slice(0, length) } })
+  }
+}
+
 async function open(api: EditorApi) {
   render(<QuestionnaireEditor api={api} questionnaire="intake" version={1} />)
-  await screen.findByText("About")
+  await (await findOutline()).findByText("About")
   return api
 }
 
@@ -175,11 +217,11 @@ describe("the editor", () => {
   it("renders the outline from the document it fetched", async () => {
     await open(fakeApi())
 
-    expect(screen.getByText("About")).toBeTruthy()
-    expect(screen.getByText("Basics")).toBeTruthy()
-    expect(screen.getByText("Your name")).toBeTruthy()
+    expect(outline().getByText("About")).toBeTruthy()
+    expect(outline().getByText("Basics")).toBeTruthy()
+    expect(outline().getByText("Your name")).toBeTruthy()
     // A page that can be skipped says so without being opened.
-    expect(screen.getByText("skippable")).toBeTruthy()
+    expect(outline().getByText("skippable")).toBeTruthy()
   })
 
   it("opens the version itself first", async () => {
@@ -191,9 +233,9 @@ describe("the editor", () => {
   it("shows a question's own form when it is picked", async () => {
     await open(fakeApi())
 
-    fireEvent.click(screen.getByText("Your name"))
+    fireEvent.click(outline().getByText("Your name"))
 
-    expect((screen.getByLabelText("Key") as HTMLInputElement).value).toBe("name")
+    expect(editKey().value).toBe("name")
     expect(screen.getByLabelText("Question type")).toBeTruthy()
     // The validator's params are rendered from its own schema, not hard-coded.
     expect((screen.getByLabelText("Minimum *") as HTMLInputElement).value).toBe("2")
@@ -205,7 +247,7 @@ describe("the editor", () => {
     // the focus, so only one character could be typed at a time.
     await open(fakeApi({}, withChoices()))
 
-    fireEvent.click(screen.getByText("Pick one"))
+    fireEvent.click(outline().getByText("Pick one"))
     const field = screen.getAllByLabelText("Value")[0] as HTMLInputElement
     field.focus()
     fireEvent.change(field, { target: { value: "ye" } })
@@ -221,17 +263,106 @@ describe("the editor", () => {
     // it, the same way it dropped the focus out of a choice being typed in.
     await open(fakeApi())
 
-    fireEvent.click(screen.getByText("Your name"))
-    const row = screen.getByText("Your name")
-    fireEvent.change(screen.getByLabelText("Key"), { target: { value: "full-name" } })
+    fireEvent.click(outline().getByText("Your name"))
+    const row = outline().getByText("Your name")
+    fireEvent.change(editKey(), { target: { value: "full-name" } })
 
-    expect(screen.getByText("Your name")).toBe(row)
+    expect(outline().getByText("Your name")).toBe(row)
     expect((screen.getByLabelText("Key") as HTMLInputElement).value).toBe("full-name")
+  })
+
+  it("shows the key as help text rather than as a field", async () => {
+    await open(fakeApi())
+    fireEvent.click(outline().getByText("Your name"))
+
+    // Readable, and out of the way: the key is the most consequential value on
+    // the form and the one an author has least reason to touch.
+    expect(screen.getByText("name", { selector: "code" })).toBeTruthy()
+    expect(screen.queryByLabelText("Key")).toBeNull()
+  })
+
+  it("writes the key from the title of a node that has not been saved", async () => {
+    await open(fakeApi())
+    // Adding selects what was added, so the form on screen is the new question.
+    fireEvent.click(outline().getAllByText("+ Question")[0]!)
+    type(screen.getByLabelText("Title"), "Your job title")
+
+    expect(editKey().value).toBe("your-job-title")
+  })
+
+  it("keeps following the title for every character, not just the first", async () => {
+    // The bug this pins: the rule used to ask whether the key still looked like
+    // one the editor had generated, which stopped being true the moment the
+    // first character was typed -- so the key stuck at "y".
+    await open(fakeApi())
+    fireEvent.click(outline().getAllByText("+ Question")[0]!)
+    const title = screen.getByLabelText("Title")
+
+    type(title, "Your")
+    expect(editKey().value).toBe("your")
+
+    type(title, "Your job")
+    expect(screen.getByLabelText("Key")).toHaveProperty("value", "your-job")
+  })
+
+  it("stops following once the key has been typed into by hand", async () => {
+    await open(fakeApi())
+    fireEvent.click(outline().getAllByText("+ Question")[0]!)
+    type(screen.getByLabelText("Title"), "Role")
+    fireEvent.change(editKey(), { target: { value: "job-role" } })
+
+    type(screen.getByLabelText("Title"), "Role at work")
+
+    expect((screen.getByLabelText("Key") as HTMLInputElement).value).toBe("job-role")
+  })
+
+  it("leaves a saved node's key alone as its title changes", async () => {
+    // Answers are filed under it, so a title change must not rewrite a key the
+    // server already knows -- that would orphan every answer given under it.
+    await open(fakeApi())
+    fireEvent.click(outline().getByText("Your name"))
+    type(screen.getByLabelText("Title"), "Full name")
+
+    expect(editKey().value).toBe("name")
+  })
+
+  it("stops following what it was following once it is saved", async () => {
+    const api = await open(fakeApi())
+    fireEvent.click(outline().getAllByText("+ Question")[0]!)
+    type(screen.getByLabelText("Title"), "Role")
+    expect(editKey().value).toBe("role")
+
+    fireEvent.click(screen.getByText("Save"))
+    await waitFor(() => expect(api.saveDefinition).toHaveBeenCalled())
+
+    // The marker is the editor's own note and never leaves it.
+    const sent = vi.mocked(api.saveDefinition).mock.calls[0]![2]
+    expect(JSON.stringify(sent)).not.toContain("isNew")
+  })
+
+  it("opens the key field itself when the server refused the key", async () => {
+    const api = fakeApi({
+      saveDefinition: vi.fn(async () => {
+        throw new DefinitionRejected([
+          { path: "pages.0", errors: { key: ["That key is taken."] } },
+        ])
+      }),
+    })
+    await open(api)
+
+    fireEvent.click(outline().getByText("About"))
+    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "About you" } })
+    fireEvent.click(screen.getByText("Save"))
+
+    // Without clicking Edit: an error under help text nobody can act on is
+    // worse than no error at all.
+    await screen.findByText("That key is taken.")
+    expect(screen.getByLabelText("Key")).toBeTruthy()
   })
 
   it("does not offer choices to a type that does not take them", async () => {
     await open(fakeApi())
-    fireEvent.click(screen.getByText("Your name"))
+    fireEvent.click(outline().getByText("Your name"))
 
     expect(screen.queryByText("Choices")).toBeNull()
   })
@@ -239,7 +370,7 @@ describe("the editor", () => {
   it("sends what was edited, without the fields only the server writes", async () => {
     const api = await open(fakeApi())
 
-    fireEvent.click(screen.getByText("About"))
+    fireEvent.click(outline().getByText("About"))
     fireEvent.change(screen.getByLabelText("Description"), {
       target: { value: "Tell us about yourself." },
     })
@@ -254,8 +385,8 @@ describe("the editor", () => {
   it("will not save while it can see something wrong itself", async () => {
     const api = await open(fakeApi())
 
-    fireEvent.click(screen.getByText("About"))
-    fireEvent.change(screen.getByLabelText("Key"), { target: { value: "About Us" } })
+    fireEvent.click(outline().getByText("About"))
+    fireEvent.change(editKey(), { target: { value: "About Us" } })
     fireEvent.click(screen.getByText("Save"))
 
     // Once under the field, once in the summary at the top.
@@ -273,7 +404,7 @@ describe("the editor", () => {
     })
     await open(api)
 
-    fireEvent.click(screen.getByText("About"))
+    fireEvent.click(outline().getByText("About"))
     fireEvent.change(screen.getByLabelText("Title"), { target: { value: "About you" } })
     fireEvent.click(screen.getByText("Save"))
 
@@ -288,15 +419,25 @@ describe("the editor", () => {
     fireEvent.click(screen.getByText("+ Page"))
     fireEvent.click(screen.getAllByText("+ Section")[1]!)
 
-    expect(screen.getByText("Untitled page")).toBeTruthy()
-    expect(screen.getByText("Untitled section")).toBeTruthy()
+    expect(outline().getByText("Untitled page")).toBeTruthy()
+    expect(outline().getByText("Untitled section")).toBeTruthy()
+  })
+
+  it("selects what was just added", async () => {
+    await open(fakeApi())
+
+    fireEvent.click(screen.getByText("+ Page"))
+
+    // The page's own form, ready to be named -- not the outline row alone.
+    expect(screen.getByText("Page")).toBeTruthy()
+    expect((screen.getByLabelText("Title") as HTMLInputElement).value).toBe("Untitled page")
   })
 
   it("warns about the answers a renamed key would orphan", async () => {
     await open(fakeApi())
 
-    fireEvent.click(screen.getByText("Your name"))
-    fireEvent.change(screen.getByLabelText("Key"), { target: { value: "full-name" } })
+    fireEvent.click(outline().getByText("Your name"))
+    fireEvent.change(editKey(), { target: { value: "full-name" } })
 
     expect(screen.getByText(/no longer be read/)).toBeTruthy()
   })
@@ -312,7 +453,7 @@ describe("the editor", () => {
     })
     const api = await open(fakeApi({}, withResponses))
 
-    fireEvent.click(screen.getByText("About"))
+    fireEvent.click(outline().getByText("About"))
     fireEvent.change(screen.getByLabelText("Title"), { target: { value: "About you" } })
 
     const save = screen.getByText("Save") as HTMLButtonElement
@@ -332,7 +473,7 @@ describe("the editor", () => {
   it("reverts to what the server last agreed to", async () => {
     await open(fakeApi())
 
-    fireEvent.click(screen.getByText("About"))
+    fireEvent.click(outline().getByText("About"))
     fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Changed" } })
     expect(screen.getByText("unsaved")).toBeTruthy()
 
@@ -387,11 +528,11 @@ describe("its words", () => {
     render(
       <QuestionnaireEditor api={fakeApi()} questionnaire="intake" version={1} strings={ptBR} />,
     )
-    await screen.findByText("About")
+    await (await findOutline()).findByText("About")
 
     expect(screen.getByText("Salvar")).toBeTruthy()
     expect(screen.getByLabelText("Título")).toBeTruthy()
-    expect(screen.getByText("pulável")).toBeTruthy()
+    expect(outline().getByText("pulável")).toBeTruthy()
     // The catalogue reaches the outline and the forms alike, through the
     // context rather than through a prop threaded down by hand.
     expect(screen.getByText("+ Página")).toBeTruthy()
@@ -401,7 +542,7 @@ describe("its words", () => {
     render(
       <QuestionnaireEditor api={fakeApi()} questionnaire="intake" version={1} strings={ptBR} />,
     )
-    await screen.findByText("About")
+    await (await findOutline()).findByText("About")
 
     expect(screen.getByText("Revert")).toBeTruthy()
     expect(screen.getByLabelText("Description")).toBeTruthy()
@@ -411,20 +552,20 @@ describe("its words", () => {
     render(
       <QuestionnaireEditor api={fakeApi()} questionnaire="intake" version={1} strings={ptBR} />,
     )
-    await screen.findByText("About")
+    await (await findOutline()).findByText("About")
 
     fireEvent.click(screen.getByText("+ Página"))
 
-    expect(screen.getByText("Página sem título")).toBeTruthy()
+    expect(outline().getByText("Página sem título")).toBeTruthy()
   })
 
   it("phrases what it found wrong in the catalogue's words too", async () => {
     render(
       <QuestionnaireEditor api={fakeApi()} questionnaire="intake" version={1} strings={ptBR} />,
     )
-    await screen.findByText("About")
+    await (await findOutline()).findByText("About")
 
-    fireEvent.click(screen.getByText("About"))
+    fireEvent.click(outline().getByText("About"))
     fireEvent.change(screen.getByLabelText("Título"), { target: { value: "" } })
     fireEvent.click(screen.getByText("Salvar"))
 

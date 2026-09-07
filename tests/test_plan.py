@@ -92,6 +92,19 @@ class TestQuestionPlan:
         assert plan["choices"] == [{"value": "red", "label": "Red"}]
         assert plan["allowsOther"] is True
 
+    def test_the_other_label_travels_with_the_other_option(self, section):
+        # The label used to stop at the definition: an author named the escape
+        # hatch and the respondent still read whatever the client called it.
+        question = make_question(
+            section,
+            key="how",
+            question_type=QuestionType.SINGLE_CHOICE,
+            allows_other=True,
+            other_label="Some other way",
+        )
+
+        assert question_plan(question)["otherLabel"] == "Some other way"
+
     def test_a_matrix_travels_with_both_axes(self, section):
         question = make_question(section, key="grid", question_type=QuestionType.BINARY_MATRIX)
         QuestionChoice.objects.create(question=question, axis="row", value="mon", label="Monday")

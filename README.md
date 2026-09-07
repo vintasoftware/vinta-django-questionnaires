@@ -38,6 +38,14 @@ uv run python -m example.manage demo_response   # narrates a whole response
 uv run python -m example.manage runserver       # admin at /admin/, API at /api/questionnaires/
 ```
 
+To poke at the editor and the rendered form on their own, with no Django behind
+them, there is a playground in the client package:
+
+```bash
+npm --prefix client install
+npm --prefix client run playground   # http://localhost:5399
+```
+
 And a React front end for it under [demo/](demo/README.md) -- TanStack Start,
 Vite and the [vinta-schedule-design-system](https://www.npmjs.com/package/vinta-schedule-design-system),
 rendering and validating entirely from the plan the server sends:
@@ -473,6 +481,34 @@ edit -- `PUT` takes `{"document": ..., "acknowledgement": {"understood": true,
 "reason": "..."}}`, and without it the save is refused.
 
 For the editor itself, see [client/README.md](client/README.md#the-editor).
+
+### Widgets
+
+A widget is a row: a key, the JSON Schema its props must satisfy, and the
+question types it renders. The server renders nothing -- it stores the key the
+client maps to a component, and checks `Question.widget_props` against the
+schema on every save.
+
+An installation needs a widget set before a question can name one, so the
+package ships one whose keys the TypeScript client has components for:
+
+```bash
+python manage.py install_default_widgets
+```
+
+It is idempotent, so it is safe in a deploy step and safe to re-run after an
+upgrade to pick up widgets a later release added. It will not overwrite a widget
+you have edited unless you pass `--overwrite`, and will not take a default
+question type away from a widget of your own. `--dry-run` says what it would do.
+
+The set itself is `vinta_django_questionnaires.widget_defaults.DEFAULT_WIDGETS`,
+which is a plain list -- start from it and edit rather than copying it out of
+here.
+
+A question that names no widget uses whichever widget is `is_default` for its
+type, and the plan carries whichever was resolved. On the client, a project
+replaces any of them by registering a component under the same key; see
+[client/README.md](client/README.md#rendering-a-questionnaire).
 
 ### Reading the responses
 
